@@ -1,0 +1,82 @@
+---
+title: "Calc_metrics_prelimAnalysis"
+author: "Alexandra Alexiev"
+date: "4/21/2021"
+output: html_document
+---
+### Packages
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+
+### Load data
+
+Previously, we fit growth curves to three data sets:
+
+1) CFS as
+Cell-free supernatant experiment to test additive vs. synergistic effects of probiotics vs. cocktails on Bd growth
+
+2) CFS fac
+Cell-free supernatant experiment to test facilitation of cocktail microbes against Bd growth
+
+3) Bact fac
+Bacterial growth only (no Bd) test to see if cocktail microbes increase each other's growth/growth rate more than when grown alone
+
+```{r load data}
+fit_cfs_as <- readRDS("output_files/fit_cfs_as.rds")
+fit_cfs_fac <- readRDS("output_files/fit_cfs_fac.rds")
+fit_bact_fac <- readRDS("output_files/fit_bact_fac.rds")
+
+# assign objects to data frames of relevance
+cfs_as_fitEst <- fit_cfs_as$`Pooled fit`
+cfs_fac_fitEst <- fit_cfs_fac$`Pooled fit`
+bact_fac_fitEst <- fit_bact_fac$`Pooled fit`
+```
+
+
+### Calculate metrics
+
+Put fit estimates into the following equation: 
+
+N1 = K/ (1 + (K-N0)/N0 * e^(-rt) )
+
+* **K**: Carrying capacity
+* **r**: Growth rate (h-1)
+* **t**: Generation time
+* **sigma**: Variance in data around the fit model
+* **N0**: Estimate starting population
+* **t_mid**: 1/2kmax in a MM model
+* **N1**: Estimate end populations (we want population at 100 hrs)
+
+```{r calc metrics}
+cfs_as_fitEst$N1 <- with(cfs_as_fitEst, k / (1 + (k - n0)/n0 * exp(-(r * 100))))
+cfs_as_fitEst[is.na(cfs_as_fitEst)] <- 0 # replace NaNs with zero since they are 0 growth
+
+cfs_fac_fitEst$N1 <- with(cfs_fac_fitEst, k / (1 + (k - n0)/n0 * exp(-(r * 100))))
+cfs_fac_fitEst[is.na(cfs_fac_fitEst)] <- 0 # replace NaNs with zero since they are 0 growth
+
+bact_fac_fitEst$N1 <- with(bact_fac_fitEst, k / (1 + (k - n0)/n0 * exp(-(r * 100))))
+bact_fac_fitEst[is.na(bact_fac_fitEst)] <- 0 # replace NaNs with zero since they are 0 growth
+```
+
+```{r save r data files}
+# commented out so I don't overwrite existing saved files unless I want to
+
+# save.image("~/Documents/Projects/ProbioticCocktails/02_PreliminaryAnalysis/Cocktail_trials/01_preliminaryAnalysis/Calc_metrics_prelimAnalysis.RData")
+# 
+# saveRDS(cfs_as_fitEst, "cfs_as_fitEst.rds")
+# saveRDS(cfs_fac_fitEst, "cfs_fac_fitEst.rds")
+# saveRDS(bact_fac_fitEst, "bact_fac_fitEst.rds")
+```
+
+## Cross-check visually that N1 calculated matches the fit on the graphs
+
+Notes:
+
+- Live Bd in both CFS trials was pretty similar magnitude
+- Most things inhibited, some less than others
+- 54D did not inhibit, as expected since it shouldn't
+- N1 calculated seems to match where the line of best fit lands on the graphs

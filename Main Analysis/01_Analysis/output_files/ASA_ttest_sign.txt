@@ -1,0 +1,2 @@
+"X20D_2F" "X20D_54D" "X20D_Jliv10" "X20D_JlivBTP" "X20D_37E" "X2F_54D" "X2F_Jliv10" "X2F_JlivBTP" "X2F_37E" "X54D_Jliv10" "X54D_JlivBTP" "X54D_37E" "Jliv10_JlivBTP" "Jliv10_37E" "JlivBTP_37E"
+"1" "Antagonistic" "Antagonistic" "Antagonistic" "Antagonistic" "Antagonistic" "Antagonistic" "Antagonistic" "Antagonistic" "Antagonistic" "Antagonistic" "Additive" "Antagonistic" "Antagonistic" "Antagonistic" "Antagonistic"

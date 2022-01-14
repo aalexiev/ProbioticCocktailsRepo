@@ -1,0 +1,203 @@
+---
+title: "Filter_outliers_EDA"
+author: "MYC"
+date: "13/04/2021"
+output:
+  html_document: default
+---
+### Packages
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(growthcurver)
+source("filt_growth_curves.R")
+```
+
+### Load data
+```{r}
+############ Load files ##########
+cfs_as <- read.delim("CFS_as_2.25.21_metadataLONG.txt", sep = " ")
+cfs_fac <- read.delim("CFS_fac_2.27.21_metadataLONG.txt", sep = " ")
+bact_fac <- read.delim("Paired_fac_metadata_CLEAN.txt", sep = "\t")
+
+```
+
+## Clean up data
+
+After viewing data, there are a few issues we need to address:
+
+* I'm creating "Rep" number (1-10) to make plotting easier
+* Converting the paired bacterial data into "long format" instead of "wide format"; renaming columns to match first two spreadsheets.
+
+```{r}
+#### Look at data first ####
+# Need to add some hourly timepoints in
+# Add replicate # for easy plotting
+cfs_as_edit <- cfs_as %>% 
+  unite(well_ID,Plate, col="Rep_char", remove=FALSE) %>%
+  group_by(sampleID, HoursElapsed)  %>% mutate(Rep = factor(rank(Rep_char)))# This makes each well belonging to unique sampleID:hours combo a different "rep"
+
+# This one looks fine; but add rep IDs
+cfs_fac_edit <- cfs_fac %>% 
+      unite(well_ID,Plate, col="Rep_char", remove=FALSE) %>%
+  group_by(sampleID, HoursElapsed)  %>% mutate(Rep = factor(rank(Rep_char)))# This makes each well belonging to unique sampleID:hours combo a different "rep"
+
+
+# Convert to long format
+# Remove NAs
+bact_fac_edit <- bact_fac %>% pivot_longer(starts_with("HR"), names_to="time", values_to="OD") %>%
+  separate(time, into = c("HR","remove"), sep="_") %>%
+  mutate(HoursElapsed = as.numeric(gsub("HR","",HR))) %>%
+  rename(sampleID = Sample_Type) %>%
+  separate(Replicate_trial, into = c("remove1","remove2", "Rep"), sep="_", remove=FALSE, fill = "left") %>%
+  select(-c(HR, remove, remove1, remove2)) %>%
+  filter(!is.na(OD)) %>% mutate(Rep = factor(Rep))
+```
+
+### Plotting to verify data looks normal
+
+Next, I plot everything
+
+```{r cfs_as_OD_by_time, fig.height=15, fig.width=10}
+# Plot to verify that everything looks normal
+# Look at singles to see what kind of noise there is
+cfs_as_edit %>% 
+  ggplot() + geom_line(aes(x=HoursElapsed, y=OD, group=Rep, col=factor(Plate))) +
+  facet_wrap(.~sampleID, ncol = 5)
+```
+
+```{r cfs_fac_OD_by_time, fig.height=15, fig.width=10}
+# Plot to verify that everything looks normal
+# Look at singles to see what kind of noise there is
+cfs_fac_edit %>% 
+  ggplot() + geom_line(aes(x=HoursElapsed, y=OD, group=Rep, col=factor(Plate))) +
+  facet_wrap(.~sampleID, ncol=5)
+```
+
+```{r bact_OD_by_time, fig.height=10, fig.width=8} 
+bact_fac_edit %>% 
+  # filter(sampleID == unique(cfs_as_edit$sampleID)[6]) %>%
+  ggplot() + geom_line(aes(x=HoursElapsed, y=OD, group=Rep)) +
+  facet_wrap(.~sampleID, ncol=4)
+```
+
+Now, We need to subtract out the "controls", which are just the CFS without Bd. Additionally, the bacterial experiment (bact_fac) seems like the last time point is messed up. Let's remove that one.
+
+```{r subtract_controls_out}
+## Subtract out sterile media/controls
+# Here, I take the average OD of "controls" (aka CFS only) and subtract it out of the Bd ones.
+cfs_as_types <- cfs_as_edit %>% 
+  rowwise() %>% mutate(Bd = ifelse(length(grep("Bd", sampleID))>0, "Bd","noBd"), CFS_type = gsub("_Bd","",sampleID)) %>%  ungroup() %>%
+  mutate(CFS_type = ifelse(CFS_type%in% c("SterileMedium","Live"), "Control", CFS_type)) 
+cfs_as_con <- cfs_as_types %>% filter(Bd=="noBd") %>%group_by(CFS_type, Timepoint, HoursElapsed) %>%
+  summarize(conOD_ave = mean(OD), conOD_sd = sd(OD)) %>% ungroup()
+cfs_as_treat_adj  <- cfs_as_types %>%  left_join(cfs_as_con) %>%
+  mutate(OD_adj = OD-conOD_ave) %>% filter(Bd=="Bd")
+
+#For fac
+cfs_fac_types <- cfs_fac_edit %>% 
+  rowwise() %>% mutate(Bd = ifelse(length(grep("Bd", sampleID))>0, "Bd","noBd"), CFS_type = gsub("_Bd","",sampleID)) %>%  ungroup() %>%
+  mutate(CFS_type = ifelse(CFS_type%in% c("SterileMedium","Live"), "Control", CFS_type)) 
+cfs_fac_con <- cfs_fac_types %>% filter(Bd=="noBd") %>%group_by(CFS_type, Timepoint, HoursElapsed) %>%
+  summarize(conOD_ave = mean(OD), conOD_sd = sd(OD)) %>% ungroup()
+cfs_fac_treat_adj  <- cfs_fac_types %>%  left_join(cfs_fac_con) %>%
+  mutate(OD_adj = OD-conOD_ave) %>% filter(Bd=="Bd")
+
+# For naming consistency; make another copy
+bact_fac_treat_adj <- bact_fac_edit  %>% mutate(OD_adj = OD) %>%
+  filter(HoursElapsed<50)
+
+
+```
+
+
+## Automated script
+
+Finally, I use our "automated script" that calculates growth rate for each combination, after doing the following filtering/data adjustment steps:
+
+* First, we subtract the "starting OD" from all timepoints so that everything "starts" at OD==0. You can change this setting by including "subtract_start=FALSE", if you want to keep "raw values" as-is.
+* Then, the algorithm looks at standard deviation within-treatment-timepoint to see if there are individual outliers.The default threshold for outlier cutoff is 3xSE (which is ~ 99th percentile). These are removed and highlighted in blue in the final fit plot
+* Next, we fit a preliminary growth curve to each individual replicate and see if there are individual time points that give outrageous variable values (>3xSE). These replicates are removed, and highlighted in blue in the final plot.
+* Finally, we calculate a "total" growth curve by pooling all replicates. For some reason, pooling replicates seems to yield better looking growth curves than averaging growth rates from individual curves. I include both in the output: "Pooled fit" referse to pooling all samples from a "treatment" type and then estimating growth; "Fit of individual replicates" fits a separate growth curve to every replicate within a treatment type (ie there are 10 fits per combination of microbes). You can go through them yourself and decide which one you like better. 
+
+#### INPUT
+The function accepts the following input:
+
+* **dat** - Data frame or tibble. Must have column for time, replicate, treatment, OD
+* **Replicate** - Must be unique within a treatment.
+* **Treatment** - In your dataset, "sampleID" is actually "treatment"
+* **OD** - Must already have all controls subtracted out
+* **Time** - Time; I used HoursElapsed.
+* **single_outlier_cutoff** - A length-two vector that tells you where to set cutoff to remove outliers. You can either specify "sd" (standard deviation) or "cutoff" in first element; and a numeric in the second element. For example, c("sd",3) means the cutoff will be 3x the standard deviation of each variable. DEFAULT: c("sd",3)
+* **replicate_outlier_cutoff** - A length-two vector that tells you where to set cutoff to remove outliers. You can either specify "sd" (standard deviation) or "cutoff" in first element; and a numeric in the second element. For example, c("sd",3) means the cutoff will be 3x the standard deviation of each variable. DEFAULT: c("sd",3)
+* **subtract_start** - Indicates whether you want to "zero" all data first (aka subtract T0). DEFAULT=TRUE
+
+
+#### OUTPUT
+
+The variables that are produced in the "Pooled fit" and "Fit of individual replicates" are:
+
+* **RepSamp**: This is just Replicate + Treatment (concatenated) to identify unique wells
+* **Treatment**: The CFS or fac combination you used (e.g. 2F_Jliv10_Bd)
+* **Replicate**: Unique identifier within-treatment
+
+* **k**: Carrying capacity
+* **r**: Growth rate (h-1)
+* **t_gen**: Generation time
+* **sigma**: Variance in data around the fit model
+* **n0**: Estimate starting population
+* **t_mid**: 1/2kmax in a MM model
+
+Additionally, there are 4 default diagnostic plots:
+
+**Plot fit of pooled model**
+-> Growth curves overlayed on data
+
+**Plot outliers of centred data**
+-> Data is centred by each timepoint (by RepSamp), and outliers (3xSE; red dotted line) are removed
+
+**Plot outliers of centred fit variables**
+-> Growth curves are fit to the data and each variable is centred by Treatment, then plotted. Red dotted line (3xSE) indicates outlier cutoffs. Replicates that produce models that are outliers in any one of their estimated variables are removed.
+
+**Plot outliers of raw fit variables**
+-> Estimated parameters for pooled fit models. 
+
+```{r cfs_as_fit, warnings=FALSE,fig.height=8, fig.width=10}
+fit_cfs_as <- fit_growth_curve(dat = cfs_as_treat_adj, "Rep", "sampleID", "OD_adj", "HoursElapsed")
+fit_cfs_as$`Plot fit of pooled model`
+```
+
+```{r cfs_fac_fit, fig.height=8, fig.width=10}
+fit_cfs_fac <- fit_growth_curve(dat = cfs_fac_treat_adj, "Rep", "sampleID", "OD_adj", "HoursElapsed")
+fit_cfs_fac$`Plot fit of pooled model`
+```
+NOTE: For bacteria, it seems that a threshold of 2xsd for single outliers results in better fits. You can play around with this if you want.
+```{r bact_fac_fit, , fig.height=8, fig.width=10}
+fit_bact_fac <- fit_growth_curve(dat = bact_fac_treat_adj, "Rep", "sampleID", "OD_adj", "HoursElapsed", single_outlier_cutoff = c("sd",2))
+
+fit_bact_fac$`Plot fit of pooled model`
+```
+
+### Downstream
+
+In the plots above, cases with no black line means that the program wasn't able to fit a logistic curve. There are also some cases where the logistic curve is fit, but it is extremely close to zero-- I think these are probably just "zero growth". 
+
+If you want to look at the distribution of raw fit estimates (r, k, n0) or the histograms of values used to fitler outliers, then you can call some of the other plots and check them out. 
+
+Looking at the fits, it seems that there are two variables you might need to consider: r (growth rate; you could use t_gen too, which is "generation time") and k (carrying capacity-- aka how dense the Bd/bacteria get overall). I would actually probably recommend using these fit models to calculate "OD @ Hour 100" or something, rather than using r and k because some of the growth curves are really weird-- for example, if you have a generation time of 200+hours, I don't think you should assume the Bd will be "full grown" at hour 200... I think it's probably just dead. Likewise, if you have k = 5000OD, I don't think you will actually have a well with a final OD of 5000, even if the model fit is good-- I think the shape of the curve is just really weird.
+
+So, for Bd, I would personally calculate OD at a consistent hour to get "growth" of Bd in each well, using the logistic growth formula (N1 = K/ (1+ (K-N0)/N0 * e^(-rt) )) and the estimated values above. This will probably give you more intuitive/readable results than using the growth-curve estimates directly. 
+
+For bacteria, the growth curves actually all look really good, so you can probably compare the r and k values directly.
+
+
+Hope that makes sense!
+
+```{r Save some files}
+# Note: looks like "removePoint" col is what I want to filter the reps by. 
+
+saveRDS(fit_cfs_as, "fit_cfs_as.rds")
+saveRDS(fit_cfs_fac, "fit_cfs_fac.rds")
+saveRDS(fit_bact_fac, "fit_bact_fac.rds")
+```

@@ -1,0 +1,45 @@
+Treatment	bact_name	SampleType	Control_Trial	Prediction	Result	fitmodelGrowth_at_100hr
+20D	Chryseobacterium sp.	alone_control	C	no growth	no growth	0
+20D_2F	Chryseobacterium sp. and Pseudomonas sp.	pair_control	C	no growth	no growth	0
+20D_Jliv10	Chryseobacterium sp. and Collimonas sp.	pair_control	C	no growth	no growth	0
+20D_JlivBTP	Chryseobacterium sp. and J. lividum (str. BTP)	pair_control	C	no growth	no growth	0
+2F	Pseudomonas sp.	alone_control	C	no growth	no growth	0
+2F_Jliv10	Pseudomonas sp. and Collimonas sp.	pair_control	C	no growth	no growth	0
+2F_JlivBTP	Pseudomonas sp. and J. lividum (str. BTP)	pair_control	C	no growth	no growth	0
+37E	Microbacterium sp.	alone_control	C	no growth	no growth	0
+37E_20D	Microbacterium sp. and Chryseobacterium sp.	pair_control	C	no growth	no growth	0
+37E_2F	Microbacterium sp. and Pseudomonas sp.	pair_control	C	no growth	no growth	0
+37E_54D	Microbacterium sp. and Curvibacter sp.	pair_control	C	no growth	no growth	0
+37E_Jliv10	Microbacterium sp. and Collimonas sp.	pair_control	C	no growth	no growth	0
+37E_JlivBTP	Microbacterium sp. and J. lividum (str. BTP)	pair_control	C	no growth	no growth	0
+54D	Curvibacter sp.	alone_control	C	no growth	no growth	0
+54D_20D	Curvibacter sp. and Chryseobacterium sp.	pair_control	C	no growth	no growth	0
+54D_2F	Curvibacter sp. and Pseudomonas sp.	pair_control	C	no growth	no growth	0
+54D_Jliv10	Curvibacter sp. and Collimonas sp.	pair_control	C	no growth	no growth	0
+54D_JlivBTP	Curvibacter sp. and J. lividum (str. BTP)	pair_control	C	no growth	no growth	0
+Jliv10	Collimonas sp.	alone_control	C	no growth	no growth	0
+JlivBTP	J. lividum (str. BTP)	alone_control	C	no growth	no growth	0
+Jliv10_JlivBTP	Collimonas sp. and J. lividum (str. BTP)	pair_control	C	no growth	no growth	0
+20D_Bd	Chryseobacterium sp. 	Bd_alone_trial	T	inhibitory - no or low growth	slight growth but extremely low	0
+20D_2F_Bd	Chryseobacterium sp. and Pseudomonas sp. 	Bd_pair_trial	T	inhibitory - no or low growth	same no growth as control	0
+20D_Jliv10_Bd	Chryseobacterium sp. and Collimonas sp. 	Bd_pair_trial	T	inhibitory - no or low growth	"some growth, variable as time progresses"	0.03914998
+20D_JlivBTP_Bd	Chryseobacterium sp. and J. lividum (str. BTP) 	Bd_pair_trial	T	inhibitory - no or low growth	"two small rounds of growth, very low"	0
+2F_Bd	Pseudomonas sp. 	Bd_alone_trial	T	inhibitory - no or low growth	"no growth, just like control"	0
+2F_Jliv10_Bd	Pseudomonas sp. and Collimonas sp. 	Bd_pair_trial	T	inhibitory - no or low growth	"no growth, just like control"	0
+2f_JlivBTP_Bd	Pseudomonas sp. and J. lividum (str. BTP) 	Bd_pair_trial	T	inhibitory - no or low growth	"no growth, just like control"	0
+37E_Bd	Microbacterium sp. 	Bd_alone_trial	T	inhibitory - no or low growth	"no growth, just like control"	0
+37E_20D_Bd	Microbacterium sp. and Chryseobacterium sp. 	Bd_pair_trial	T	inhibitory - no or low growth	"no growth, just like control"	0
+37E_2F_Bd	Microbacterium sp. and Pseudomonas sp. 	Bd_pair_trial	T	inhibitory - no or low growth	"no growth, just like control"	0
+37E_54D_Bd	Microbacterium sp. and Curvibacter sp. 	Bd_pair_trial	T	inhibitory - no or low growth	low growth but only first round Bd	0
+37E_Jliv10_Bd	Microbacterium sp. and Collimonas sp. 	Bd_pair_trial	T	inhibitory - no or low growth	low growth but only first round Bd	0.02776713
+37E_JlivBTP_Bd	Microbacterium sp. and J. lividum (str. BTP) 	Bd_pair_trial	T	inhibitory - no or low growth	"no growth, just like control"	0
+54D_Bd	Curvibacter sp. 	Bd_alone_trial	T	growth	growth	0.09261801
+54D_20D_Bd	Curvibacter sp. and Chryseobacterium sp. 	Bd_pair_trial	T	inhibitory - no or low growth	growth	0.17490004
+54D_2F_Bd	Curvibacter sp. and Pseudomonas sp. 	Bd_pair_trial	T	inhibitory - no or low growth	"no growth, just like control"	0.01738763
+54D_Jliv10_Bd	Curvibacter sp. and Collimonas sp. 	Bd_pair_trial	T	inhibitory - no or low growth	"some growth, variable as time progresses"	0.07784573
+54D_JlivBTP_Bd	Curvibacter sp. and J. lividum (str. BTP) 	Bd_pair_trial	T	inhibitory - no or low growth	"some growth, variable as time progresses"	0.03576158
+Jliv10_Bd	Collimonas sp. 	Bd_alone_trial	T	inhibitory - no or low growth	"some growth, variable as time progresses"	0.03877484
+JlivBTP_Bd	J. lividum (str. BTP) 	Bd_alone_trial	T	inhibitory - no or low growth	"growth, variable"	0.08187225
+Jliv10_JlivBTP_Bd	Collimonas sp. and J. lividum (str. BTP) 	Bd_pair_trial	T	inhibitory - no or low growth	"some growth, variable as time progresses"	0.02558084
+Live_Bd	Live Bd	Bd_control	C	growth	growth but increased variability over time less than some trials	0.1436938
+SterileMedium	Sterile Medium	Sterile_control	C	no growth	no growth	0

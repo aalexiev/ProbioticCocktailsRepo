@@ -1,0 +1,1012 @@
+---
+title: "01_prelimViz"
+author: "Alexandra Alexiev"
+date: "4/29/2021"
+output: html_document
+---
+
+These are the preliminary visualizations and statistics for the probiotic cocktails experiment. We chose five microbes for this set of experiments, based on previous descriptive work where we grew over 100 toad skin bacteria on Bd lawns and measured the zone of inhibition. Four are highly inhibitive and create many connections in a co-occurence network, and one is non-inhibitive towards Bd but has been found in high relative abundance consistently in tadpole 16S sequencing data in past experiments.
+
+cfs_as = experiment in which each bacteria was grown individually, filtered for its metabolites, then either tested alone or in paired combinations with Bd zoospores.
+
+cfs_fac = experiment in which each bacteria was grown alone or in paired combinations, then filtered for metabolites and combined with Bd zoospores.
+
+bact_fac = experiment in which each bacteria was grown alone or in paired combinations and OD taken every few hours (no Bd was part of this experiment).
+
+
+### Packages
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(tidyverse)
+library(agricolae)
+library(lsmeans)
+library(multcompView)
+library(ggpubr)
+library(ggforce)
+library(RColorBrewer)
+library(viridis)
+sessionInfo()
+
+# setwd("/Users/alal3493/Documents/Projects/03_ProbioticCocktails/02_PreliminaryAnalysis/Cocktail_trials/01_preliminaryAnalysis")
+```
+
+### Load in data
+
+```{r load in data}
+## these are just the estimates from the model
+cfs_as_fitEst <- readRDS("Rdata_files/cfs_as_fitEst.rds")
+cfs_fac_fitEst <- readRDS("Rdata_files/cfs_fac_fitEst.rds")
+bact_fac_fitEst <- readRDS("Rdata_files/bact_fac_fitEst.rds")
+
+
+## these are the full fit files with all the associated plots, etc.
+cfs_as_fitFull <- readRDS("../00_datacleanup/02_outlierfilter/output_files/fit_cfs_as.rds")
+cfs_fac_fitFull <- readRDS("../00_datacleanup/02_outlierfilter/output_files/fit_cfs_fac.rds")
+bact_fac_fitFull <- readRDS("../00_datacleanup/02_outlierfilter/output_files/fit_bact_fac.rds")
+```
+
+### Test Some Different Stats and Plots
+
+I'm not sure how I want to do the stats right now. I could (a) use the carrying capacity and calculated SE from the growthcurver output, or (b) filter out the outliers identified by growthcurver and run an ANOVA of my own. I think (b) would be more rigorous but I want to try (a) now in case it is actually informative and accurate since it is faster and more direct.
+
+## Bar graph comparing Bd growth at 100 hrs from growthcurver in cfs as
+```{r bar graph comparing Bd growth at 100 hrs from growthcurver in cfs as, echo=FALSE}
+# add column to be used for colors and stats
+prelim_cfsas <- read.delim("Prelim_results_cfsas.txt", sep = "\t",
+                           header = T) # read in this file that has the column I need, although there are extra sample IDs for controls I don't want to bother graphing
+
+cfs_as_fitEst <- cfs_as_fitEst %>%
+    left_join(prelim_cfsas, by = "Treatment") %>% # add the Treatment col from above file to use for colors later
+    select(-c("Prediction", "Result", "fitmodelGrowth_at_100hr")) # remove the non-relevant cols to graph
+
+# make graph
+ggplot(data = cfs_as_fitEst, aes(x = Treatment, y = N1, fill = SampleType)) +
+    geom_bar(stat = "identity") +
+    geom_hline(yintercept = cfs_as_fitEst$N1[22], linetype = "dashed") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ylab("Bd growth at time 100 based on fitted growth curve")
+
+# Problem is this doesn't have an associated SE from growthcurver and I'm not sure how I'd even approach calculating it on one calculated value from an equation that has variables that have SE's.
+```
+
+
+## Bar graph comparing Bd carrying capacity from option (a) in cfs as
+```{r bar graph comparing Bd carrying capacity from option (a) in cfs as, echo=FALSE}
+# add column to be used for colors and stats
+prelim_cfsas <- read.delim("Prelim_results_cfsas.txt", sep = "\t",
+                           header = T) # read in this file that has the column I need, although there are extra sample IDs for controls I don't want to bother graphing
+
+cfs_as_fitEst <- cfs_as_fitEst %>%
+    left_join(prelim_cfsas, by = "Treatment") %>%
+    select(-c("Prediction", "Result", "fitmodelGrowth_at_100hr"))
+    
+
+# make graph
+ggplot(data = cfs_as_fitEst, mapping = aes(x = Treatment, y = k, fill = SampleType.x)) +
+    geom_point(aes(color = SampleType.x)) +
+    geom_hline(yintercept = cfs_as_fitEst$k[22], linetype = "dashed") +
+    geom_errorbar(mapping = aes(ymin = (k - k_se), ymax = (k + k_se))) + # when I add this, the se for 54D_Jliv10_Bd is so big that the graph scales horribly and every point looks like it's basically zero -_-
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ylab("Bd carrying capacity")
+```
+
+Basically, the above graph is saying there is no real difference between any of these trials. Not sure I'd beleive this, mostly because when I look at the calculated SE for 54D_Jliv10_Bd, it is ridiculously high compared to the others. But on the graphs with all the outliers removed and replicate trials shown, the variation isn't much higher than e.g. Jliv_BTP_Bd.
+
+Part of the issue with using growthcurver for fitting curves is Bd goes through two "rounds" of growth in the flasks AND wells we use to grow it. One is the initial stage, and takes different amounts of time, then a second small round of growth before it hits true carrying capacity. Probably related to how much area is available for Bd zoospores to land and attach to when they become sporangia. I could figure out where each graph hits that first k and cut them all off there, but that seems potentially biologically not consistent for the area we've given them to grow and it would be at a slightly different time for each bacterial trial. Also, I think the second "wave" of growth for most of these is not so big that the k should be greatly influenced -- when you look at the raw graphs, the second wave just looks like noise in the asymptote for most of the trials and occasionally there will be a trial where the k actually goes up some variable amount.
+
+
+## Graphs comparing Bd growth at 100 hrs from option (b) in cfs as
+```{r bar graph comparing Bd growth at 100 hrs from option (b) in cfs as, echo=FALSE}
+# add column to be used for colors and stats
+prelim_cfsas <- read.delim("Prelim_results_cfsas.txt", sep = "\t",
+                           header = T) # read in this file that has the column I need, although there are extra sample IDs for controls I don't want to bother graphing
+# filter out outliers (FALSE in removePoint)
+cfs_as_fitFilt <- cfs_as_fitFull$`Plot fit of pooled model`$data %>%
+    dplyr::filter(removePoint == FALSE, Time == 95) %>% # remove outliers and filter out only Time = 95 since that is the most stable looking point from the preliminary outlier graphs
+    inner_join(prelim_cfsas, by = "Treatment") # add column for colors
+# change some typos
+cfs_as_fitFilt <- data.frame(lapply(cfs_as_fitFilt, function(x) {
+    gsub("Jliv_BTP", "JlivBTP", x)
+}))
+cfs_as_fitFilt <- data.frame(lapply(cfs_as_fitFilt, function(x) {
+    gsub("2f_JlivBTP_Bd", "2F_JlivBTP_Bd", x)
+}))
+cfs_as_fitFilt <- data.frame(lapply(cfs_as_fitFilt, function(x) {
+    gsub("and", "and \n", x)
+}))
+
+# make this function for making tukey group labels for graph later
+# group the treatments that are not different each other together.
+generate_label_df <- function(TUKEY, variable){
+ 
+     # Extract labels and factor levels from Tukey post-hoc 
+     Tukey.levels <- TUKEY[[variable]][,4]
+     Tukey.labels <- data.frame(multcompLetters(Tukey.levels)['Letters'])
+     
+     #I need to put the labels in the same order as in the boxplot :
+     Tukey.labels$Treatment = rownames(Tukey.labels)
+     Tukey.labels = Tukey.labels[order(Tukey.labels$Treatment) , ]
+     return(Tukey.labels)
+     }
+
+
+# filter and do stats by each type of combo
+list_bact <- c("20D", "2F", "54D", "Jliv10", "JlivBTP", "37E") # make list of bacteria
+cats_pairs <- combn(list_bact, 2)
+cfs_as_stats <- list()
+for (i in 1:ncol(cats_pairs)) { #for each pair of bacteria
+    
+    ## make a df with only related trials
+    # find mean OD of live Bd trials
+    Mean_Bdlive <- mean(as.numeric(cfs_as_fitFilt$OD[cfs_as_fitFilt$Treatment == "Live_Bd"]), na.rm = T)
+    cfs_as_fitsubbed <- cfs_as_fitFilt %>%
+        filter(Treatment %in% c("Live_Bd", # subset the data
+                                paste0(cats_pairs[1,i], "_Bd"),
+                                paste0(cats_pairs[2,i], "_Bd"),
+                                paste0(cats_pairs[1,i], "_", cats_pairs[2,i], "_Bd"),
+                                paste0(cats_pairs[2,i], "_", cats_pairs[1,i], "_Bd"))) %>%
+        mutate(uniques = paste0(.group,"_",SampleType)) %>% # make a col that is group and sample type for later ease of graphing
+        mutate(Diff_Bd = Mean_Bdlive - as.numeric(OD)) # make a col that is difference between mean live Bd and each trial OD
+    cfs_as_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["df_filt"]] <- cfs_as_fitsubbed # save the file from above in output list
+    
+    ## Calculate stats of raw data and add to the output list
+    cfs_as_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["ANOVA"]] <- aov(OD ~ Treatment, cfs_as_fitsubbed) # run ANOVA, save in output list
+    tuk <- TukeyHSD(aov(OD ~ Treatment, cfs_as_fitsubbed)) # run Tukey HSD (tehcnically Tukey-Kramer for unbalanced group sizes)
+    cfs_as_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["tuk"]] <- tuk # save in output list
+    cfs_as_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["tuk_groups"]] <- generate_label_df(tuk, "Treatment")
+    
+    ## Calculate stats for Bd diffs and save
+    cfs_as_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["Bd_diff_plot"]][["ANOVA"]] <- aov(Diff_Bd ~ Treatment, cfs_as_fitsubbed) # run ANOVA, save in output list
+    tuk <- TukeyHSD(aov(Diff_Bd ~ Treatment, cfs_as_fitsubbed)) # run Tukey HSD (tehcnically Tukey-Kramer for unbalanced group sizes)
+    cfs_as_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["Bd_diff_plot"]][["tuk"]] <- tuk # save in output list
+    cfs_as_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["Bd_diff_plot"]][["tuk_groups"]] <- generate_label_df(tuk, "Treatment")
+    
+    ## Graph the data and add to output list
+    cfs_as_graphMeans <- cfs_as_fitsubbed %>%
+        group_by(Treatment) %>%
+        dplyr::summarise(Mean_OD = mean(as.numeric(OD), na.rm = T),
+                         std = sd(as.numeric(OD), na.rm = T)) %>%
+        mutate(SampleType = case_when(Treatment == paste0(cats_pairs[1,i], "_Bd") ~ "Alone Trial", # add SampleType col for later graphing
+                                    Treatment == paste0(cats_pairs[2,i], "_Bd") ~ "Alone Trial",
+                                    Treatment == paste0(cats_pairs[1,i], "_", cats_pairs[2,i], "_Bd") ~ "Pair Trial",
+                                    Treatment == paste0(cats_pairs[2,i], "_", cats_pairs[1,i], "_Bd") ~ "Pair Trial",
+                                    Treatment == "Live_Bd" ~ "Bd Control")) %>%
+        mutate(Diff_Bd = Mean_OD[Treatment == "Live_Bd"] - Mean_OD) %>% # calculate the difference in means
+        mutate(sd_Diff_Bd = sqrt((std[Treatment == "Live_Bd"])^2 + std^2)) # subtract SD for each mean
+    
+    # add group labels and bact names to graphing data object
+    bact_names <- dplyr::select(cfs_as_fitsubbed, c(bact_name, Treatment)) %>%
+        unique() # create df with the names non-duplicated
+    cfs_as_graphMeans_HSD <- cfs_as_graphMeans %>%
+        inner_join(cfs_as_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["tuk_groups"]], by = "Treatment") %>% # add grouping letters
+        inner_join(bact_names, by = "Treatment") # add  bact_names for later graphing
+    cfs_as_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["HSD_plot"]][["graphing_input_df"]] <- cfs_as_graphMeans # save in output list
+
+    # plot of HSD test
+    cfs_as_graphMeans_HSD$bact_name <- factor(cfs_as_graphMeans_HSD$bact_name, levels = c(cfs_as_graphMeans_HSD$bact_name[1], cfs_as_graphMeans_HSD$bact_name[2], cfs_as_graphMeans_HSD$bact_name[3], cfs_as_graphMeans_HSD$bact_name[4]))
+    HSD_plot <- ggplot(data = cfs_as_graphMeans_HSD, aes(x = bact_name, y = Mean_OD,
+                                                     color = SampleType)) +
+        geom_point(stat = "identity", size = 3) +
+        geom_errorbar(mapping = aes(ymin = (Mean_OD - std), ymax = (Mean_OD + std)),
+                      position = position_dodge(width = 0.9), width = 0.25) +
+        geom_text(aes(y = Mean_OD + std, label = Letters),
+                  position = position_dodge(width = 0.9), color = "black",
+                  vjust = -0.5, size = 7, show.legend = FALSE) +
+        theme(axis.text.x = element_text(angle = 25, hjust = 1),
+              axis.title.x = element_blank()) +
+        ylab("Mean Bd growth per treatment at time 100 hrs (avg of reps)")
+    cfs_as_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["HSD_plot"]] <- HSD_plot # save in output list
+    ggsave(filename = paste0(cats_pairs[1,i], "_", cats_pairs[2,i], "_HSDplot.png"),
+           path = "Prelim_Figs/prelimPlots_cfs_as/HSD_plots",
+           plot = HSD_plot,
+           width = 8, height = 7, dpi = 300) # save plot to computer
+
+    # add group labels for Bd diffs to graphing data object
+    cfs_as_graphMeans_Bddiff <- cfs_as_graphMeans %>%
+        inner_join(cfs_as_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["Bd_diff_plot"]][["tuk_groups"]], by = "Treatment") %>% # add grouping letters
+        inner_join(bact_names, by = "Treatment") # add  bact_names for later graphing
+    cfs_as_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["Bd_diff_plot"]][["graphing_input_df"]] <- cfs_as_graphMeans # save in output list
+    
+    # plot of Bd diff
+    cfs_as_graphMeans_Bddiff$bact_name <- factor(cfs_as_graphMeans_Bddiff$bact_name, levels = c(cfs_as_graphMeans_Bddiff$bact_name[1], cfs_as_graphMeans_Bddiff$bact_name[2], cfs_as_graphMeans_Bddiff$bact_name[3], cfs_as_graphMeans_Bddiff$bact_name[4]))
+    Bd_diff_plot <- ggplot(data = cfs_as_graphMeans_Bddiff, aes(x = bact_name, y = Diff_Bd, 
+                                                 color = SampleType)) +
+        geom_point(stat = "identity", size = 3) +
+        geom_errorbar(mapping = aes(ymin = (Diff_Bd - sd_Diff_Bd), ymax = (Diff_Bd + sd_Diff_Bd)),
+                      position = position_dodge(width = 0.9), width = 0.25) +
+        geom_text(aes(y = Diff_Bd + sd_Diff_Bd, label = Letters),
+                  position = position_dodge(width = 0.9), color = "black",
+                  vjust = -0.5, size = 7, show.legend = FALSE) +
+        theme(axis.text.x = element_text(angle = 50, hjust = 1),
+              axis.title.x = element_blank(),
+              text = element_text(size = 15)) +
+        coord_cartesian(ylim = c(-0.07, 0.21)) +
+        ylab("Difference in Bd growth from live Bd \ncontrol at time 100 hrs (avg of reps)")
+    cfs_as_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["Bd_diff_plot"]] <- Bd_diff_plot # save in output list
+        ggsave(filename = paste0(cats_pairs[1,i], "_", cats_pairs[2,i], "_BdDiffPlot.png"), 
+           path = "Prelim_Figs/prelimPlots_cfs_as/Bd_diff_plots",
+           plot = Bd_diff_plot,
+           width = 8, height = 7, dpi = 300) # save plot to computer
+        
+        
+        ## Find out which are additive/synergistic/antagonistic
+        
+        # make a dataframe of the sum of each difference between trial and live Bd for each individual replicate
+        ASA_diffdf <- cfs_as_fitsubbed %>%
+            group_by(Replicate) %>%
+            dplyr::summarise(alone_sum = Diff_Bd[Treatment == paste0(cats_pairs[1,i], "_Bd")] + Diff_Bd[Treatment == paste0(cats_pairs[2,i], "_Bd")]) # make column of sums of each RepSamp
+        
+        # add to new df for running stats
+        ASA_df <- cfs_as_fitsubbed %>%
+            dplyr::filter(Treatment == paste0(cats_pairs[1,i], "_", cats_pairs[2,i], "_Bd") | Treatment == paste0(cats_pairs[2,i], "_", cats_pairs[1,i], "_Bd")) %>% # filter out only the combined treatment from large df
+            inner_join(ASA_diffdf, by = "Replicate") %>% # combine the alone differences by replicate
+            select(c("Replicate", "Diff_Bd", "alone_sum")) %>% # select only these relevant cols
+            gather("Diff_Bd", "alone_sum", key = Key, value = Value) # gather the data
+        
+        # run t-test and save it in stats object
+        ttest <- t.test(Value ~ Key, data = ASA_df, paired = F)
+        cfs_as_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["Bd_diff_plot"]][["ASA_ttest"]] <- ttest
+        cfs_as_stats[["ASA_ttest_sign"]][[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]] <- if (ttest$p.value > 0.05) {
+            print("Additive")
+        } else {
+            if (ttest$estimate > 0) {
+                print("Antagonistic")
+            } else {
+                print("Synergistic")
+            }
+        }
+        write.table(cfs_as_stats[["ASA_ttest_sign"]],
+                    "output_files/ASA_ttest_sign.txt")
+    
+}
+
+```
+
+
+### Make Basic plots that are best
+I decided to use: option (b) from above for all the plots, so now I will apply them to the other two experimental datasets.
+
+## Graphs comparing Bd growth at 100 hrs from option (b) in cfs fac
+```{r bar graph comparing Bd growth at 100 hrs from option (b) in cfs fac, echo=FALSE}
+# add column to be used for colors and stats
+prelim_cfsas <- read.delim("Prelim_results_cfsas.txt", sep = "\t",
+                           header = T) # read in this file that has the column I need, although there are extra sample IDs for controls I don't want to bother graphing
+# filter out outliers (FALSE in removePoint)
+cfs_fac_fitFilt <- cfs_fac_fitFull$`Plot fit of pooled model`$data %>%
+    dplyr::filter(removePoint == FALSE, Time == 97) %>% # remove outliers and filter out only Time = 95 since that is the most stable looking point from the preliminary outlier graphs
+    inner_join(prelim_cfsas, by = "Treatment") # add column for colors
+# change Jliv_BTP to be JlivBTP and 2f_JlivBTP to be 2F_JlivBTP
+cfs_fac_fitFilt <- data.frame(lapply(cfs_fac_fitFilt, function(x) {
+    gsub("Jliv_BTP", "JlivBTP", x)
+}))
+cfs_fac_fitFilt <- data.frame(lapply(cfs_fac_fitFilt, function(x) {
+    gsub("2f_JlivBTP_Bd", "2F_JlivBTP_Bd", x)
+}))
+cfs_fac_fitFilt <- data.frame(lapply(cfs_fac_fitFilt, function(x) {
+    gsub("and", "and \n", x)
+}))
+
+# make this function for making tukey group labels for graph later
+# group the treatments that are not different each other together.
+generate_label_df <- function(TUKEY, variable){
+ 
+     # Extract labels and factor levels from Tukey post-hoc 
+     Tukey.levels <- TUKEY[[variable]][,4]
+     Tukey.labels <- data.frame(multcompLetters(Tukey.levels)['Letters'])
+     
+     #I need to put the labels in the same order as in the boxplot :
+     Tukey.labels$Treatment = rownames(Tukey.labels)
+     Tukey.labels = Tukey.labels[order(Tukey.labels$Treatment) , ]
+     return(Tukey.labels)
+     }
+
+
+# filter and do stats by each type of combo
+list_bact <- c("20D", "2F", "54D", "Jliv10", "JlivBTP", "37E") # make list of bacteria
+cats_pairs <- combn(list_bact, 2)
+cfs_fac_stats <- list()
+for (i in 1:ncol(cats_pairs)) { #for each pair of bacteria
+    
+    ## make a df with only related trials
+    cfs_fac_fitsubbed <- cfs_fac_fitFilt %>%
+        filter(Treatment %in% c("Live_Bd", # subset the data
+                                paste0(cats_pairs[1,i], "_Bd"),
+                                paste0(cats_pairs[2,i], "_Bd"),
+                                paste0(cats_pairs[1,i], "_", cats_pairs[2,i], "_Bd"),
+                                paste0(cats_pairs[2,i], "_", cats_pairs[1,i], "_Bd"))) %>%
+        mutate(uniques = paste0(.group,"_",SampleType)) # make a col that is group and sample type for later ease of graphing
+    cfs_fac_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["df_filt"]] <- cfs_fac_fitsubbed # save the file from above in output list
+    
+    ## Calculate stats and add to the output list
+    cfs_fac_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["ANOVA"]] <- aov(OD ~ Treatment, cfs_fac_fitsubbed) # run ANOVA, save in output list
+    tuk <- TukeyHSD(aov(OD ~ Treatment, cfs_fac_fitsubbed)) # run Tukey HSD (tehcnically Tukey-Kramer for unbalanced group sizes)
+    cfs_fac_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["tuk"]] <- tuk # save in output list
+    cfs_fac_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["tuk_groups"]] <- generate_label_df(tuk, "Treatment")
+    
+    ## Graph the data and add to output list
+    bact_names <- dplyr::select(cfs_fac_fitsubbed, c(bact_name, Treatment)) %>%
+        unique() # create df with the names non-duplicated
+    cfs_fac_graphMeans <- cfs_fac_fitsubbed %>%
+        group_by(Treatment) %>%
+        dplyr::summarise(Mean_OD = mean(as.numeric(OD), na.rm = T),
+                         std = sd(as.numeric(OD), na.rm = T)) %>%
+        mutate(SampleType = case_when(Treatment == paste0(cats_pairs[1,i], "_Bd") ~ "Alone Trial", # add SampleType col for later graphing
+                                    Treatment == paste0(cats_pairs[2,i], "_Bd") ~ "Alone Trial",
+                                    Treatment == paste0(cats_pairs[1,i], "_", cats_pairs[2,i], "_Bd") ~ "Pair Trial",
+                                    Treatment == paste0(cats_pairs[2,i], "_", cats_pairs[1,i], "_Bd") ~ "Pair Trial",
+                                    Treatment == "Live_Bd" ~ "Bd Control")) %>%
+        mutate(Diff_Bd = (Mean_OD[Treatment == "Live_Bd"]) - Mean_OD) %>% # create and calc diff for each from 0
+        inner_join(cfs_fac_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["tuk_groups"]], by = "Treatment") %>% # add grouping letters
+        inner_join(bact_names, by = "Treatment") # add  bact_names for later graphing
+    cfs_fac_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["graphing_input_df"]] <- cfs_fac_graphMeans # save in output list
+
+    # plot of HSD test
+    cfs_fac_graphMeans$bact_name <- factor(cfs_fac_graphMeans$bact_name, levels = c(cfs_fac_graphMeans$bact_name[1], cfs_fac_graphMeans$bact_name[2], cfs_fac_graphMeans$bact_name[3], cfs_fac_graphMeans$bact_name[4]))
+    HSD_plot <- ggplot(data = cfs_fac_graphMeans, aes(x = bact_name, y = Mean_OD,
+                                                     color = SampleType)) +
+        geom_point(stat = "identity", size = 3) +
+        geom_errorbar(mapping = aes(ymin = (Mean_OD - std), ymax = (Mean_OD + std)),
+                      position = position_dodge(width = 0.9), width = 0.25) +
+        geom_text(aes(y = Mean_OD + std, label = Letters),
+                  position = position_dodge(width = 0.9), color = "black",
+                  vjust = -0.5, size = 7, show.legend = FALSE) +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+              axis.title.x = element_blank(),
+              text = element_text(size = 17)) +
+        coord_cartesian(ylim = c(-0.07, 0.17)) +
+        ylab("Mean Bd growth per treatment \nat time 100 hrs (avg of reps)")
+    cfs_fac_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["HSD_plot"]] <- HSD_plot # save in output list
+    ggsave(filename = paste0(cats_pairs[1,i], "_", cats_pairs[2,i], "_HSDplot.png"),
+           path = "Prelim_Figs/prelimPlots_cfs_fac/HSD_plots",
+           plot = HSD_plot,
+           width = 8, height = 7, dpi = 300) # save plot to computer
+
+    # plot of Bd diff
+    Bd_diff_plot <- ggplot(data = cfs_fac_graphMeans, aes(x = bact_name, y = Diff_Bd, 
+                                                 color = SampleType)) +
+        geom_point(stat = "identity", size = 3) +
+        geom_text(aes(y = Diff_Bd + 0.01, label = Letters),
+                  position = position_dodge(width = 0.9), color = "black",
+                  vjust = -0.5, size = 7, show.legend = FALSE) +
+        theme(axis.text.x = element_text(angle = 25, hjust = 1),
+              axis.title.x = element_blank()) +
+        ylab("Difference in Bd growth from live Bd control at time 100 hrs (avg of reps)")
+    cfs_fac_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["Bd_diff_plot"]] <- Bd_diff_plot # save in output list
+        ggsave(filename = paste0(cats_pairs[1,i], "_", cats_pairs[2,i], "_BdDiffPlot.png"), 
+           path = "Prelim_Figs/prelimPlots_cfs_fac/Bd_diff_plots",
+           plot = Bd_diff_plot,
+           width = 8, height = 7, dpi = 300) # save plot to computer
+    
+}
+
+```
+
+
+## Graphs comparing r and k at 100 hrs from option (b) in bact fac
+```{r bar graph comparing bacterial growth rate (r) and carrying capacity (k), echo=FALSE}
+# make a plot of bacterial growth rate (r) and carrying capacity (k) with single or paired cocktails
+
+# add column to be used for colors and stats
+prelim_cfsas <- read.delim("Prelim_results_cfsas.txt", sep = "\t",
+                           header = T) # read in this file that has the column I need, although there are extra sample IDs for controls I don't want to bother graphing
+
+# add back in these two replicates of 54D that were incorrectly removed in outlier removal process
+df54D <- bact_fac_fitFull$`Plot outliers of centred data`$data[bact_fac_fitFull$`Plot outliers of centred data`$data$RepSamp %in% c("2_54D", "3_54D"), ] %>%
+    mutate(k = case_when(RepSamp == "2_54D" ~ 0.158,
+                         RepSamp == "3_54D" ~ 0.176)) %>% # add estimates of k from graphs
+    mutate(r = case_when(RepSamp == "2_54D" ~ -0.03864450135,
+                         RepSamp == "3_54D" ~ -0.04710948408)) %>% # add calculation of r from graphs (I just looked at the graphs and plugged in the numbers into the growth curve equation)
+    dplyr::filter(OD == 0) %>%
+    select(c("RepSamp", "Replicate", "Treatment", "r", "k"))
+
+bact_fac_fitEst <- bact_fac_fitFull$`Fit of individual replicates` %>% # this file has the outlier-removed r and k estimates per each replicate
+    bind_rows(data.frame(df54D))
+bact_fac_fitEst <- data.frame(lapply(bact_fac_fitEst, function(x) {
+    gsub("2f_JlivBTP", "2F_JlivBTP", x)
+}))
+bact_fac_fitEst <- left_join(bact_fac_fitEst, prelim_cfsas, by = "Treatment")
+
+# make this function for making tukey group labels for graph later
+# group the treatments that are not different each other together.
+generate_label_df <- function(TUKEY, variable){
+ 
+     # Extract labels and factor levels from Tukey post-hoc 
+     Tukey.levels <- TUKEY[[variable]][,4]
+     Tukey.labels <- data.frame(multcompLetters(Tukey.levels)['Letters'])
+     
+     #I need to put the labels in the same order as in the boxplot :
+     Tukey.labels$Treatment = rownames(Tukey.labels)
+     Tukey.labels = Tukey.labels[order(Tukey.labels$Treatment) , ]
+     return(Tukey.labels)
+     }
+
+
+# filter and do stats by each type of combo
+list_bact <- c("20D", "2F", "54D", "Jliv10", "JlivBTP", "37E") # make list of bacteria
+cats_pairs <- combn(list_bact, 2)
+bact_fac_stats <- list()
+for (i in 1:ncol(cats_pairs)) { #for each pair of bacteria
+    
+    ## make a df with only related trials
+    bact_fac_fitsubbed <- bact_fac_fitEst %>%
+        filter(Treatment %in% c(cats_pairs[1,i], # filter by each matching pair and controls
+                                cats_pairs[2,i],
+                                paste0(cats_pairs[1,i], "_", cats_pairs[2,i]),
+                                paste0(cats_pairs[2,i], "_", cats_pairs[1,i])))
+    bact_fac_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["df_filt"]] <- bact_fac_fitsubbed # save the file from above in output list
+    
+    ## Calculate stats on r estimates, and add to the output list
+    bact_fac_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["r_ANOVA"]] <- aov(r ~ Treatment, bact_fac_fitsubbed) # run ANOVA, save in output list
+    r_tuk <- TukeyHSD(aov(r ~ Treatment, bact_fac_fitsubbed)) # run Tukey HSD
+    bact_fac_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["r_tuk"]] <- r_tuk # save in output list
+    bact_fac_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["r_tuk_groups"]] <- generate_label_df(r_tuk, "Treatment")
+
+    ## Calculate stats on k estimates, and add to the output list
+    bact_fac_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["k_ANOVA"]] <- aov(k ~ Treatment, bact_fac_fitsubbed) # run ANOVA on k values, save in output list
+    k_tuk <- TukeyHSD(aov(k ~ Treatment, bact_fac_fitsubbed)) # run Tukey HSD (technically Tukey-Kramer for unbalanced group sizes)
+    bact_fac_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["k_tuk"]] <- k_tuk # save in output list
+    bact_fac_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["k_tuk_groups"]] <- generate_label_df(k_tuk, "Treatment")
+
+    ## Graph the data and add to output list
+    bact_names <- dplyr::select(bact_fac_fitsubbed, c(bact_name, Treatment)) %>%
+        unique() # create df with the names non-duplicated
+    bact_fac_graph <- bact_fac_fitsubbed %>%
+        group_by(Treatment) %>%
+        dplyr::summarise(mean_r = mean(as.numeric(r), na.rm = T),
+                         mean_k = mean(as.numeric(k), na.rm = T),
+                         std_r = sd(as.numeric(r), na.rm = T),
+                         std_k = sd(as.numeric(k), na.rm = T)) %>%
+        mutate(SampleType = case_when(Treatment == paste0(cats_pairs[1,i]) ~ "Alone Trial", # add SampleType col for later graphing
+                                    Treatment == paste0(cats_pairs[2,i]) ~ "Alone Trial",
+                                    Treatment == paste0(cats_pairs[1,i], "_", cats_pairs[2,i]) ~ "Pair Trial",
+                                    Treatment == paste0(cats_pairs[2,i], "_", cats_pairs[1,i]) ~ "Pair Trial")) %>%
+        inner_join(bact_fac_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["r_tuk_groups"]], by = "Treatment") %>% # add grouping letters for r
+        inner_join(bact_fac_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["k_tuk_groups"]], by = "Treatment") %>% # add grouping letters for k
+        rename(Letters_r = Letters.x) %>% # rename the columns for the letters
+        rename(Letters_k = Letters.y) %>%
+        inner_join(bact_names, by = "Treatment") # add  bact_names for later graphing
+    bact_fac_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["graphing_input_df"]] <- bact_fac_graph # save in output list
+
+    # r bar plot
+    r_barplot <- ggplot(data = bact_fac_graph, aes(x = bact_name, y = mean_r, fill = SampleType)) +
+        geom_bar(stat = "identity") +
+        geom_errorbar(mapping = aes(ymin = (mean_r - std_r), ymax = (mean_r + std_r))) +
+        geom_text(aes(y = mean_r + std_r, label = Letters_r),
+                  position = position_dodge(width = 0.9), color = "black",
+                  vjust = -0.5, size = 7, show.legend = FALSE) +
+        theme(axis.text.x = element_text(angle = 25, hjust = 1),
+              axis.title.x = element_blank()) +
+        scale_fill_discrete(name = "Sample Type") +
+        ylab("Bacterial growth rate (mean r from replicates)")
+    bact_fac_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["r_barplot"]] <- r_barplot # save in output list
+    ggsave(filename = paste0(cats_pairs[1,i], "_", cats_pairs[2,i], "_r_barplot.png"), 
+           path = "Prelim_Figs/prelimPlots_bact_fac/r_barplots",
+           plot = r_barplot,
+           width = 8, height = 7, dpi = 300) # save plot to computer
+
+    # k bar plot
+    k_barplot <- ggplot(data = bact_fac_graph, aes(x = bact_name, y = mean_k, fill = SampleType)) +
+        geom_bar(stat = "identity") +
+        geom_errorbar(mapping = aes(ymin = (mean_k - std_k), ymax = (mean_k + std_k))) +
+        geom_text(aes(y = mean_k + std_k, label = Letters_k),
+                  position = position_dodge(width = 0.9), color = "black",
+                  vjust = -0.5, size = 7, show.legend = FALSE) +
+        theme(axis.text.x = element_text(angle = 25, hjust = 1),
+              axis.title.x = element_blank()) +
+        scale_fill_discrete(name = "Sample Type") +
+        ylab("Bacterial carrying capacity (mean k from replicates)")
+    bact_fac_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["k_barplot"]] <- k_barplot # save in output list
+        ggsave(filename = paste0(cats_pairs[1,i], "_", cats_pairs[2,i], "_k_barplot.png"), 
+           path = "Prelim_Figs/prelimPlots_bact_fac/k_barplot",
+           plot = k_barplot,
+           width = 8, height = 7, dpi = 300) # save plot to computer
+    
+}
+
+```
+
+
+## Make paneled figs by microbial pair
+- for easier interpretation
+
+```{r paneled fig by microbial pair}
+# loop to make paneled figures for each pair
+list_bact <- c("20D", "2F", "54D", "Jliv10", "JlivBTP", "37E") # make list of bacteria
+cats_pairs <- combn(list_bact, 2)
+for (i in 1:ncol(cats_pairs)) { #for each pair of bacteria
+    
+    # load in each plot from different files (made in previous loops)
+    cfs_as_BdDiff <- cfs_as_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["Bd_diff_plot"]] + 
+        theme(legend.position = "none") +
+        ggtitle("Separate-then-combined CFS") +
+        annotate("label", x = 4, y = 0.15,
+                 label = cfs_as_stats[["ASA_ttest_sign"]][[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]])
+    cfs_fac_HSD <- cfs_fac_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["HSD_plot"]] +
+        ggtitle("CFS from microbes grown together")
+    bact_fac_rplot <- bact_fac_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["r_barplot"]] + theme(legend.position = "none") +
+        ggtitle("Growth rate of microbes grown together and separately (no Bd)")
+    bact_fac_kplot <- bact_fac_stats[[paste0(cats_pairs[1,i], "_", cats_pairs[2,i])]][["k_barplot"]] +
+        ggtitle("Carrying capacity of microbes grown together and separately (no Bd)")
+    
+    # arrange into panels
+    figure <- ggarrange(cfs_as_BdDiff, cfs_fac_HSD, bact_fac_rplot, bact_fac_kplot, 
+                        labels = c("A", "B", "C", "D"),
+                        ncol = 2, nrow = 2)
+    
+    # save the file
+    ggsave(filename = paste0(cats_pairs[1,i], "_", cats_pairs[2,i], ".png"), 
+           path = "Prelim_Figs/Paneled_figs_bymic",
+           plot = figure,
+           width = 20, height = 15, dpi = 300) # save plot to computer
+    
+}
+
+```
+
+
+## Make huge summary figures with all the samples
+
+# CFS fac experiment
+```{r cfs fac dot plot all samples}
+# need the data that is in cfs_fac_fitFilt
+# ANOVA and tukey post hoc
+aov_cfs_fac_all <- aov(OD ~ Treatment, data = cfs_fac_fitFilt)
+summary(aov_cfs_fac_all) # significant, p = 2e-16
+tuk_cfs_fac_all <- TukeyHSD(aov_cfs_fac_all)
+tuk_cfs_fac_all
+tuklabels_cfsfacall <- generate_label_df(tuk_cfs_fac_all, "Treatment")
+
+# find the means and SE of each point
+cfsfacall_graphMeans <- cfs_fac_fitFilt %>%
+    group_by(Treatment) %>%
+    mutate(Mean_OD = mean(as.numeric(OD), na.rm = T), # find the mean and sd of each treatment's replicates
+           std = sd(as.numeric(OD), na.rm = T)) %>%
+    distinct(Mean_OD, .keep_all = T) %>% # previous code made a bunch of duplicate columns since it kept all the replicates so we collapse it by distinct means
+    inner_join(tuklabels_cfsfacall, by = "Treatment") # add tukey group labels
+# change Jliv 10 name
+cfsfacall_graphMeans <- data.frame(lapply(cfsfacall_graphMeans, function(x) {
+    gsub("J. lividum (str. Jliv10)", "Collimonas sp.", x)
+}))
+
+# create a plot of inhibition by sample (type)
+cfsfacall_graphMeans$SampleType <- factor(cfsfacall_graphMeans$SampleType, 
+                                          levels = c("Bd_alone_trial",
+                                                     "Bd_pair_trial",
+                                                     "Bd_control"))
+cfsfacall_graphMeans <- cfsfacall_graphMeans[order(cfsfacall_graphMeans$SampleType),] # order the file by sample type
+ordered_treats <- as.list(cfsfacall_graphMeans$bact_name) # list of ordered bacteria names based on sample type order
+cfsfacall_graphMeans$bact_name <- factor(cfsfacall_graphMeans$bact_name, 
+                                          levels = ordered_treats) # order by the list above
+
+CFS_fac_all_dotplot <- ggplot(data = cfsfacall_graphMeans, mapping = aes(x = bact_name, y = as.numeric(Mean_OD))) +
+    geom_point() +
+    geom_errorbar(mapping = aes(ymin = (as.numeric(Mean_OD) - as.numeric(std)), 
+                                ymax = (as.numeric(Mean_OD) + as.numeric(std)))) +
+    annotate("rect", xmin = 0.5, ymin = -Inf, 
+                 xmax = 6.5, ymax = Inf,
+             fill = "#D95F02", alpha = 0.3) +
+    annotate("rect", xmin = 6.5, ymin = -Inf, 
+                 xmax = 21.5, ymax = Inf,
+             fill = "#7570B3", alpha = 0.3) +
+    annotate("rect", xmin = 21.5, ymin = -Inf, 
+                 xmax = 22.5, ymax = Inf,
+             fill = "#666666", alpha = 0.3) +
+    annotate("label", x = 3.5, y = 0.18, 
+             label = "Single Microbes\n(n = 6)",
+             size = 5) +
+    annotate("label", x = 14, y = 0.18, 
+             label = "Co-cultures of two microbes\n(n = 15)",
+             size = 5) +
+    annotate("label", x = 21.9, y = 0.18, 
+             label = "Control\n(n = 1)",
+             size = 5) +
+    geom_text(aes(y = as.numeric(Mean_OD) + as.numeric(std), label = Letters),
+                  position = position_dodge(width = 0.9), color = "black",
+                  vjust = -0.5, size = 6, show.legend = FALSE) +
+    theme(axis.text.x = element_text(angle = 70, hjust = 1),
+          axis.title.x = element_blank(),
+          text = element_text(size = 17)) +
+    coord_cartesian(ylim = c(-0.03, 0.2)) +
+    ylab("Average Bd growth at 100 hrs (OD)")
+CFS_fac_all_dotplot
+
+# save plot to computer
+ggsave(filename = "CFS_fac_all_dotplot.png",
+           path = "Prelim_Figs",
+           plot = CFS_fac_all_dotplot,
+           width = 13, height = 8, dpi = 300)
+
+```
+
+# Growth rate (r)
+```{r growth rate dot plot all samples}
+# need the data that is in bact_fac_fitEst
+# ANOVA and tukey post hoc
+aov_bact_fac_r <- aov(r ~ Treatment, data = bact_fac_fitEst)
+summary(aov_bact_fac_r) # significant, p = 0.000603
+tuk_bact_fac_r <- TukeyHSD(aov_bact_fac_r)
+tuk_bact_fac_r
+tuklabels_cfsbactr <- generate_label_df(tuk_bact_fac_r, "Treatment")
+
+# find the means and SE of each point
+cfsbactr_graphMeans <- bact_fac_fitEst %>%
+    group_by(Treatment) %>%
+    mutate(Mean_r = mean(as.numeric(r), na.rm = T),
+           std = sd(as.numeric(r), na.rm = T)) %>%
+    distinct(Mean_r, .keep_all = T) %>%
+    inner_join(tuklabels_cfsbactr, by = "Treatment") # add tukey group labels
+
+# create a plot of inhibition by sample (type)
+cfsbactr_graphMeans$SampleType <- factor(cfsbactr_graphMeans$SampleType, 
+                                          levels = c("alone_control",
+                                                     "pair_control"))
+cfsbactr_graphMeans <- cfsbactr_graphMeans[order(cfsbactr_graphMeans$SampleType),]
+ordered_treats <- as.list(cfsbactr_graphMeans$bact_name)
+cfsbactr_graphMeans$bact_name <- factor(cfsbactr_graphMeans$bact_name, 
+                                          levels = ordered_treats)
+
+CFS_bact_r_dotplot <- ggplot(data = cfsbactr_graphMeans, mapping = aes(x = bact_name, y = Mean_r)) +
+    geom_point() +
+    geom_errorbar(mapping = aes(ymin = (Mean_r - std), 
+                                ymax = (Mean_r + std))) +
+    annotate("rect", xmin = 0.5, ymin = -Inf, 
+                 xmax = 6.5, ymax = Inf,
+             fill = "#D95F02", alpha = 0.3) +
+    annotate("rect", xmin = 6.5, ymin = -Inf, 
+                 xmax = 21.5, ymax = Inf,
+             fill = "#7570B3", alpha = 0.3) +
+    annotate("label", x = 3.5, y = 1.5, 
+             label = "Single Microbes\n(n = 6)",
+             size = 6) +
+    annotate("label", x = 14, y = 1.5, 
+             label = "Co-cultures of two microbes\n(n = 15)",
+             size = 6) +
+    geom_text(aes(y = Mean_r + std, label = Letters),
+                  position = position_dodge(width = 0.9), color = "black",
+                  vjust = -0.5, size = 6, show.legend = FALSE) +
+    theme(axis.text.x = element_text(angle = 70, hjust = 1, size = 17),
+          axis.title.x = element_blank(),
+          axis.title.y = element_text(size = 17),
+          axis.text.y = element_text(size = 15)) +
+    coord_cartesian(ylim = c(-0.03, 1.6)) +
+    ylab("Average bacterial growth rate, r (per hour)")
+CFS_bact_r_dotplot
+
+# save plot to computer
+ggsave(filename = "CFS_bact_r_dotplot.png",
+           path = "Prelim_Figs",
+           plot = CFS_bact_r_dotplot,
+           width = 18, height = 11, dpi = 300)
+
+```
+
+# Carrying capacity (k)
+```{r carrying capacity dot plot all samples}
+# need the data that is in bact_fac_fitEst
+# ANOVA and tukey post hoc
+aov_bact_fac_k <- aov(k ~ Treatment, data = bact_fac_fitEst)
+summary(aov_bact_fac_k) # not significant, p = 0.289
+tuk_bact_fac_k <- TukeyHSD(aov_bact_fac_k)
+tuk_bact_fac_k # no paired comparisons were significant at all
+tuklabels_cfsbactk <- generate_label_df(tuk_bact_fac_k, "Treatment")
+
+# find the means and SE of each point
+cfsbactk_graphMeans <- bact_fac_fitEst %>%
+    group_by(Treatment) %>%
+    mutate(Mean_k = mean(as.numeric(k), na.rm = T),
+           std = sd(as.numeric(k), na.rm = T)) %>%
+    distinct(Mean_k, .keep_all = T) %>%
+    inner_join(tuklabels_cfsbactk, by = "Treatment") # add tukey group labels
+
+# create a plot of inhibition by sample (type)
+cfsbactk_graphMeans$SampleType <- factor(cfsbactk_graphMeans$SampleType, 
+                                          levels = c("alone_control",
+                                                     "pair_control"))
+cfsbactk_graphMeans <- cfsbactk_graphMeans[order(cfsbactk_graphMeans$SampleType),]
+ordered_treats <- as.list(cfsbactk_graphMeans$bact_name)
+cfsbactk_graphMeans$bact_name <- factor(cfsbactk_graphMeans$bact_name, 
+                                          levels = ordered_treats)
+
+CFS_bact_k_dotplot <- ggplot(data = cfsbactk_graphMeans, mapping = aes(x = bact_name, y = Mean_k)) +
+    geom_point() +
+    geom_errorbar(mapping = aes(ymin = (Mean_k - std), 
+                                ymax = (Mean_k + std))) +
+    annotate("rect", xmin = 0.5, ymin = -Inf, 
+                 xmax = 6.5, ymax = Inf,
+             fill = "#D95F02", alpha = 0.3) +
+    annotate("rect", xmin = 6.5, ymin = -Inf, 
+                 xmax = 21.5, ymax = Inf,
+             fill = "#7570B3", alpha = 0.3) +
+    annotate("label", x = 3.5, y = 3.7, 
+             label = "Single Microbes\n(n = 6)",
+             size = 6) +
+    annotate("label", x = 14, y = 3.7, 
+             label = "Co-cultures of two microbes\n(n = 15)",
+             size = 6) +
+    geom_text(aes(y = Mean_k + std, label = Letters),
+                  position = position_dodge(width = 0.9), color = "black",
+                  vjust = -0.5, size = 6, show.legend = FALSE) +
+    theme(axis.text.x = element_text(angle = 70, hjust = 1, size = 17),
+          axis.title.x = element_blank(),
+          axis.title.y = element_text(size = 17),
+          axis.text.y = element_text(size = 15)) +
+    coord_cartesian(ylim = c(-0.1, 4)) +
+    ylab("Average bacterial carrying capacity over 5 days (OD)")
+CFS_bact_k_dotplot
+
+# save plot to computer
+ggsave(filename = "CFS_bact_k_dotplot.png",
+           path = "Prelim_Figs",
+           plot = CFS_bact_k_dotplot,
+           width = 18, height = 11, dpi = 300)
+
+```
+
+
+# Paneled figs of CFS results
+- Make some paneled figs with all the CFS results
+
+```{r standout cfs as t-test on metabolites}
+# pull out numbers that I need for 54D-JlivBTP trial and put into a data frame for graphing
+curvijliv_fill <- c("Live Bd control", "Curvibacter sp. CFS treatment", "J. lividum CFS treatment", "Curvibacter sp. and J. lividum\ncombined CFS treatment")
+curvijliv_labels <- c("Live Bd control", "Curvibacter sp. CFS treatment\nplus\nJ. lividum CFS treatment", "Curvibacter sp. CFS treatment\nplus\nJ. lividum CFS treatment", "Curvibacter sp.\nand J. lividum\ncombined CFS treatment")
+curvijliv_levels <- c("Live Bd control", "Curvibacter sp. CFS treatment\nplus\nJ. lividum CFS treatment", "Curvibacter sp.\nand J. lividum\ncombined CFS treatment")
+# find mean and sd for Live Bd
+liveBd_only <- dplyr::filter(cfs_as_stats$`54D_JlivBTP`$df_filt, Treatment %in% "Live_Bd")
+liveBd_mean <- mean(as.numeric(liveBd_only$Diff_Bd))
+LiveBd_sd <- sd(as.numeric(liveBd_only$Diff_Bd))
+# find mean for curvi only
+curvi_only <- dplyr::filter(cfs_as_stats$`54D_JlivBTP`$df_filt, Treatment %in% "54D_Bd")
+curvi_mean <- mean(as.numeric(curvi_only$Diff_Bd))
+# find mean for Jliv only
+Jliv_only <- dplyr::filter(cfs_as_stats$`54D_JlivBTP`$df_filt, Treatment %in% "JlivBTP_Bd")
+Jliv_mean <- mean(as.numeric(Jliv_only$Diff_Bd))
+# save sd for combined curvi + jliv
+curvi_plus_Jliv_sderr <- cfs_as_stats$`54D_JlivBTP`$Bd_diff_plot$ASA_ttest$stderr
+# find mean and sd for curvi Jliv combo treatment
+cfs_as_stats$`54D_JlivBTP`$Bd_diff_plot$ASA_ttest$estimate[1]
+cfs_as_stats$`54D_JlivBTP`$Bd_diff_plot$ASA_ttest$estimate[2]
+# put together some of the data into a data frame
+curvijliv_means <- c(liveBd_mean, curvi_mean, Jliv_mean, 0.130675)
+curvijliv_meancombos <- c(liveBd_mean, curvi_mean + Jliv_mean, NA, 0.130675)
+curviJliv_sd <- c(LiveBd_sd, curvi_plus_Jliv_sderr, NA, curvi_plus_Jliv_sderr)
+cfs_as_graphdf <- data.frame(curvijliv_fill, curvijliv_labels, curvijliv_means)
+# Graph in ggplot
+curvijliv_graphas <- ggplot(cfs_as_graphdf, aes(fill = factor(curvijliv_fill,
+                                                              level = curvijliv_fill), 
+                                                y = curvijliv_means, 
+                                                x = factor(curvijliv_labels,
+                                                           level = curvijliv_levels))) + 
+    geom_col() +
+    geom_bar(position = "stack", stat = "identity") +
+    scale_fill_viridis(discrete = T) +
+    geom_errorbar(mapping = aes(ymin = (curvijliv_meancombos - curviJliv_sd), 
+                                ymax = (curvijliv_meancombos + curviJliv_sd))) +
+    theme(#axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+          axis.title.x = element_blank(),
+          axis.title.y = element_text(size = 10),
+          axis.text.y = element_text(size = 10),
+          legend.title = element_blank()) +
+ #   coord_cartesian(ylim = c(-0.1, 4)) +
+    ylab("Difference in Bd growth from live Bd \ncontrol at time 100 hrs (mean live Bd OD minus mean CFS treatment OD)") 
+curvijliv_graphas
+# save graph
+# ggsave(filename = "curvijliv_graphas.png",
+#        path = "Prelim_Figs/prelimPlots_cfs_as",
+#        plot = curvijliv_graphas,
+#        width = 9, height = 6, dpi = 300)
+
+######################
+# pull out numbers that I need for 54D-20D trial and put into a data frame for graphing
+curvichryseo_fill <- c("Live Bd control", "Curvibacter sp. CFS treatment", "Chryseobacterium sp. CFS treatment", "Curvibacter sp. and Chryseobacterium sp.\ncombined CFS treatment")
+curvichryseo_labels <- c("Live Bd control", "Curvibacter sp. CFS treatment\nplus\nChryseobacterium sp. CFS treatment", "Curvibacter sp. CFS treatment\nplus\nChryseobacterium sp. CFS treatment", "Curvibacter sp.\nand Chryseobacterium sp.\ncombined CFS treatment")
+curvichryseo_levels <- c("Live Bd control", "Curvibacter sp. CFS treatment\nplus\nChryseobacterium sp. CFS treatment", "Curvibacter sp.\nand Chryseobacterium sp.\ncombined CFS treatment")
+# already have mean and sd for Live Bd from previous graph
+# already have mean for curvi only from previous graph
+# find mean for chryseo only
+chryseo_only <- dplyr::filter(cfs_as_stats$`20D_54D`$df_filt, Treatment %in% "20D_Bd")
+chryseo_mean <- mean(as.numeric(Jliv_only$Diff_Bd))
+# save sd for combined curvi + chryseo
+curvi_plus_chryseo_sderr <- cfs_as_stats$`20D_54D`$Bd_diff_plot$ASA_ttest$stderr
+# find mean and sd for curvi chryseo combo treatment
+cfs_as_stats$`20D_54D`$Bd_diff_plot$ASA_ttest$estimate[1]
+cfs_as_stats$`20D_54D`$Bd_diff_plot$ASA_ttest$estimate[2]
+# put together some of the data into a data frame
+curvichryseo_means <- c(liveBd_mean, curvi_mean, Jliv_mean, -0.03776389)
+curvichryseo_meancombos <- c(liveBd_mean, curvi_mean + Jliv_mean, NA, -0.03776389)
+curvichryseo_sd <- c(LiveBd_sd, curvi_plus_Jliv_sderr, NA, curvi_plus_Jliv_sderr)
+cfs_as_graphdf2 <- data.frame(curvijliv_fill, curvijliv_labels, curvijliv_means)
+# Graph in ggplot
+curvichryseo_graphas <- ggplot(cfs_as_graphdf2, aes(fill = factor(curvichryseo_fill,
+                                                                  level = curvichryseo_fill), 
+                                                y = curvichryseo_means, 
+                                                x = factor(curvichryseo_labels,
+                                                           level = curvichryseo_levels))) + 
+    geom_col() +
+    geom_bar(position = "stack", stat = "identity") +
+    scale_fill_viridis(discrete = T) +
+    geom_errorbar(mapping = aes(ymin = (curvichryseo_meancombos - curvichryseo_sd), 
+                                ymax = (curvichryseo_meancombos + curvichryseo_sd))) +
+    theme(#axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+          axis.title.x = element_blank(),
+          axis.title.y = element_text(size = 10),
+          axis.text.y = element_text(size = 10),
+          legend.title = element_blank()) +
+ #   coord_cartesian(ylim = c(-0.1, 4)) +
+    ylab("Difference in Bd growth from live Bd \ncontrol at time 100 hrs (mean live Bd OD minus mean CFS treatment OD)") 
+curvichryseo_graphas
+# save graph
+# ggsave(filename = "curvichryseo_graphas.png",
+#        path = "Prelim_Figs/prelimPlots_cfs_as",
+#        plot = curvichryseo_graphas,
+#        width = 10, height = 6, dpi = 300)
+
+######################
+# pull out numbers that I need for 20D-JlivBTP trial and put into a data frame for graphing
+chryseojliv_fill <- c("Live Bd control", "Chryseobacterium sp. CFS treatment", "J. lividum CFS treatment", "Chryseobacterium sp. and J. lividum\ncombined CFS treatment")
+chryseojliv_labels <- c("Live Bd control", "Chryseobacterium sp. CFS treatment\nplus\nJ. lividum CFS treatment", "Chryseobacterium sp. CFS treatment\nplus\nJ. lividum CFS treatment", "Chryseobacterium sp.\nand J. lividum\ncombined CFS treatment")
+chryseojliv_levels <- c("Live Bd control", "Chryseobacterium sp. CFS treatment\nplus\nJ. lividum CFS treatment", "Chryseobacterium sp.\nand J. lividum\ncombined CFS treatment")
+# use mean and sd for Live Bd from previous graphs
+# use mean for chryseo only from previous graphs
+# use mean for Jliv only from previous graphs
+# save sd for combined chryseo + jliv
+chryseo_plus_Jliv_sderr <- cfs_as_stats$`20D_JlivBTP`$Bd_diff_plot$ASA_ttest$stderr
+# find mean and sd for chryseo Jliv combo treatment
+cfs_as_stats$`20D_JlivBTP`$Bd_diff_plot$ASA_ttest$estimate[1]
+cfs_as_stats$`20D_JlivBTP`$Bd_diff_plot$ASA_ttest$estimate[2]
+# put together some of the data into a data frame
+chryseojliv_means <- c(liveBd_mean, chryseo_mean, Jliv_mean, 0.1406)
+chryseojliv_meancombos <- c(liveBd_mean, chryseo_mean + Jliv_mean, NA, 0.1406)
+chryseoJliv_sd <- c(LiveBd_sd, chryseo_plus_Jliv_sderr, NA, chryseo_plus_Jliv_sderr)
+cfs_as_graphdf3 <- data.frame(chryseojliv_fill, chryseojliv_labels, chryseojliv_means)
+# Graph in ggplot
+chryseojliv_graphas <- ggplot(cfs_as_graphdf3, aes(fill = factor(chryseojliv_fill,
+                                                              level = chryseojliv_fill), 
+                                                y = chryseojliv_means, 
+                                                x = factor(chryseojliv_labels,
+                                                           level = chryseojliv_levels))) + 
+    geom_col() +
+    geom_bar(position = "stack", stat = "identity") +
+    scale_fill_viridis(discrete = T) +
+    geom_errorbar(mapping = aes(ymin = (chryseojliv_meancombos - chryseoJliv_sd), 
+                                ymax = (chryseojliv_meancombos + chryseoJliv_sd))) +
+    theme(#axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+          axis.title.x = element_blank(),
+          axis.title.y = element_text(size = 10),
+          axis.text.y = element_text(size = 10),
+          legend.title = element_blank()) +
+ #   coord_cartesian(ylim = c(-0.1, 4)) +
+    ylab("Difference in Bd growth from live Bd \ncontrol at time 100 hrs (mean live Bd OD minus mean CFS treatment OD)") 
+chryseojliv_graphas
+# save graph
+# ggsave(filename = "chryseojliv_graphas.png",
+#        path = "Prelim_Figs/prelimPlots_cfs_as",
+#        plot = chryseojliv_graphas,
+#        width = 9, height = 6, dpi = 300)
+
+#########################
+# Model graph as example
+# make some fake values
+model_fill <- c("Live Bd control", "Bacteria 1 CFS treatment", 
+                "Bacteria 2 CFS treatment", 
+                "Bacteria 1 and Bacteria 2\ncombined CFS treatment",
+                "Bacteria 1 and Bacteria 2\ncombined CFS treatment",
+                "Bacteria 1 and Bacteria 2\ncombined CFS treatment")
+model_fill_levels <- c("Live Bd control", "Bacteria 1 CFS treatment", 
+                "Bacteria 2 CFS treatment", 
+                "Bacteria 1 and Bacteria 2\ncombined CFS treatment")
+model_labels <- c("Live Bd control", 
+                  "Bacteria 1 CFS treatment\nplus\nBacteria 2 treatment", 
+                  "Bacteria 1 CFS treatment\nplus\nBacteria 2 treatment", 
+                  "Bacteria 1\nand Bacteria 2\ncombined CFS treatment\n(Additive inhibition example)", 
+                  "Bacteria 1\nand Bacteria 2\ncombined CFS treatment\n(Synergistic inhibition example)", 
+                  "Bacteria 1\nand Bacteria 2\ncombined CFS treatment\n(Antagonistic inhibition example)")
+model_levels <- c("Live Bd control", 
+                  "Bacteria 1 CFS treatment\nplus\nBacteria 2 treatment", 
+                  "Bacteria 1\nand Bacteria 2\ncombined CFS treatment\n(Additive inhibition example)", 
+                  "Bacteria 1\nand Bacteria 2\ncombined CFS treatment\n(Synergistic inhibition example)", 
+                  "Bacteria 1\nand Bacteria 2\ncombined CFS treatment\n(Antagonistic inhibition example)")
+# use real mean and sd for Live Bd from previous graph
+# fake means for bacteria only from previous graph
+bact1_mean <- 0.05
+bact2_mean <- 0.05
+# fake sd for all
+model_sderr <- 0.013
+# fake mean and sd for theoretical combos treatment
+b1b2combo_mean_add <- 0.1
+b1b2combo_mean_syn <- 0.15
+b1b2combo_mean_antag <- 0.05
+# put together some of the data into a data frame
+model_means <- c(liveBd_mean, bact1_mean, bact2_mean, b1b2combo_mean_add,
+                        b1b2combo_mean_syn, b1b2combo_mean_antag)
+model_meancombos <- c(liveBd_mean, bact1_mean + bact2_mean, NA, b1b2combo_mean_add,
+                      b1b2combo_mean_syn, b1b2combo_mean_antag)
+model_sds <- c(LiveBd_sd, model_sderr, NA, model_sderr, model_sderr, model_sderr)
+model_graphdf4 <- data.frame(model_fill, model_labels, model_means)
+# Graph in ggplot
+model_graphas <- ggplot(model_graphdf4, aes(fill = factor(model_fill,
+                                                          level = model_fill_levels), 
+                                                y = model_means, 
+                                                x = factor(model_labels,
+                                                           level = model_levels))) + 
+    geom_col() +
+    geom_bar(position = "stack", stat = "identity") +
+    scale_fill_viridis(discrete = T) +
+    geom_errorbar(mapping = aes(ymin = (model_meancombos - model_sds), 
+                                ymax = (model_meancombos + model_sds))) +
+    theme(#axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+          axis.title.x = element_blank(),
+          axis.title.y = element_text(size = 10),
+          axis.text.y = element_text(size = 10),
+          legend.title = element_blank()) +
+    coord_cartesian(ylim = c(-0.05, 0.2)) +
+    ylab("Difference in Bd growth from live Bd \ncontrol at time 100 hrs (mean live Bd OD minus mean CFS treatment OD)") 
+model_graphas
+# save graph
+# ggsave(filename = "model_graphas.png",
+#        path = "Prelim_Figs/prelimPlots_cfs_as",
+#        plot = model_graphas,
+#        width = 14, height = 6, dpi = 300)
+
+```
+
+```{r cfs as Bd diff plots in one paneled fig}
+# arrange into panels
+figure_cfsaspanel <- ggarrange(cfs_as_stats$`20D_2F`$Bd_diff_plot,
+                               cfs_as_stats$`20D_54D`$Bd_diff_plot,
+                               cfs_as_stats$`20D_Jliv10`$Bd_diff_plot,
+                               cfs_as_stats$`20D_JlivBTP`$Bd_diff_plot,
+                               cfs_as_stats$`20D_37E`$Bd_diff_plot,
+                               cfs_as_stats$`2F_54D`$Bd_diff_plot,
+                               cfs_as_stats$`2F_Jliv10`$Bd_diff_plot,
+                               cfs_as_stats$`2F_JlivBTP`$Bd_diff_plot,
+                               cfs_as_stats$`2F_37E`$Bd_diff_plot,
+                               cfs_as_stats$`54D_Jliv10`$Bd_diff_plot,
+                               cfs_as_stats$`54D_JlivBTP`$Bd_diff_plot,
+                               cfs_as_stats$`54D_37E`$Bd_diff_plot,
+                               cfs_as_stats$`Jliv10_JlivBTP`$Bd_diff_plot,
+                               cfs_as_stats$`Jliv10_37E`$Bd_diff_plot,
+                               cfs_as_stats$`JlivBTP_37E`$Bd_diff_plot,
+                               labels = LETTERS[1:15],
+                               ncol = 3, nrow = 5)
+    
+# save the file
+ggsave(filename = "cfs_as_allBddiffspaneled.png",
+       path = "Prelim_Figs/prelimPlots_cfs_as",
+       plot = figure_cfsaspanel,
+       width = 30, height = 40, dpi = 300) # save plot to computer
+```
+
+
+```{r cfs fac HSD plots in one paneled fig}
+# arrange into panels
+figure_cfsfacpanel <- ggarrange(cfs_fac_stats$`20D_2F`$HSD_plot,
+                               cfs_fac_stats$`20D_54D`$HSD_plot,
+                               cfs_fac_stats$`20D_Jliv10`$HSD_plot,
+                               cfs_fac_stats$`20D_JlivBTP`$HSD_plot,
+                               cfs_fac_stats$`20D_37E`$HSD_plot,
+                               cfs_fac_stats$`2F_54D`$HSD_plot,
+                               cfs_fac_stats$`2F_Jliv10`$HSD_plot,
+                               cfs_fac_stats$`2F_JlivBTP`$HSD_plot,
+                               cfs_fac_stats$`2F_37E`$HSD_plot,
+                               cfs_fac_stats$`54D_Jliv10`$HSD_plot,
+                               cfs_fac_stats$`54D_JlivBTP`$HSD_plot,
+                               cfs_fac_stats$`54D_37E`$HSD_plot,
+                               cfs_fac_stats$`Jliv10_JlivBTP`$HSD_plot,
+                               cfs_fac_stats$`Jliv10_37E`$HSD_plot,
+                               cfs_fac_stats$`JlivBTP_37E`$HSD_plot,
+                               labels = LETTERS[1:15],
+                               ncol = 3, nrow = 5)
+    
+# save the file
+ggsave(filename = "cfs_fac_allHSDpaneled.png",
+       path = "Prelim_Figs/prelimPlots_cfs_fac",
+       plot = figure_cfsfacpanel,
+       width = 30, height = 40, dpi = 300) # save plot to computer
+```
+
+
+
+
