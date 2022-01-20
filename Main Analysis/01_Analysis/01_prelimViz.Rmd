@@ -750,9 +750,9 @@ ggsave(filename = "CFS_bact_k_dotplot.png",
 
 ```{r standout cfs as t-test on metabolites}
 # pull out numbers that I need for 54D-JlivBTP trial and put into a data frame for graphing
-curvijliv_fill <- c("Live Bd control", "Curvibacter sp. CFS treatment", "J. lividum CFS treatment", "Curvibacter sp. and J. lividum\ncombined CFS treatment")
-curvijliv_labels <- c("Live Bd control", "Curvibacter sp. CFS treatment\nplus\nJ. lividum CFS treatment", "Curvibacter sp. CFS treatment\nplus\nJ. lividum CFS treatment", "Curvibacter sp.\nand J. lividum\ncombined CFS treatment")
-curvijliv_levels <- c("Live Bd control", "Curvibacter sp. CFS treatment\nplus\nJ. lividum CFS treatment", "Curvibacter sp.\nand J. lividum\ncombined CFS treatment")
+curvijliv_fill <- c("Live Bd control", "Curvibacter sp. CFS", "J. lividum CFS", "Curvibacter sp. and J. lividum\ncombined CFS")
+curvijliv_labels <- c("Live Bd control", "Curvibacter sp. CFS\nplus\nJ. lividum CFS", "Curvibacter sp. CFS\nplus\nJ. lividum CFS", "Curvibacter sp.\nand J. lividum\ncombined CFS")
+curvijliv_levels <- c("Live Bd control", "Curvibacter sp. CFS\nplus\nJ. lividum CFS", "Curvibacter sp.\nand J. lividum\ncombined CFS")
 # find mean and sd for Live Bd
 liveBd_only <- dplyr::filter(cfs_as_stats$`54D_JlivBTP`$df_filt, Treatment %in% "Live_Bd")
 liveBd_mean <- mean(as.numeric(liveBd_only$Diff_Bd))
@@ -784,25 +784,26 @@ curvijliv_graphas <- ggplot(cfs_as_graphdf, aes(fill = factor(curvijliv_fill,
     scale_fill_viridis(discrete = T) +
     geom_errorbar(mapping = aes(ymin = (curvijliv_meancombos - curviJliv_sd), 
                                 ymax = (curvijliv_meancombos + curviJliv_sd))) +
-    theme(#axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+    theme(axis.text.x = element_text(size = 16, face = "bold"),
           axis.title.x = element_blank(),
-          axis.title.y = element_text(size = 10),
-          axis.text.y = element_text(size = 10),
+          axis.title.y = element_text(size = 16, face = "bold"),
+          axis.text.y = element_text(size = 16, face = "bold"),
+          legend.text = element_text(size = 16, face = "bold"),
           legend.title = element_blank()) +
  #   coord_cartesian(ylim = c(-0.1, 4)) +
-    ylab("Difference in Bd growth from live Bd \ncontrol at time 100 hrs (mean live Bd OD minus mean CFS treatment OD)") 
+    ylab("Difference in Bd growth from live Bd") 
 curvijliv_graphas
 # save graph
 # ggsave(filename = "curvijliv_graphas.png",
 #        path = "Prelim_Figs/prelimPlots_cfs_as",
 #        plot = curvijliv_graphas,
-#        width = 9, height = 6, dpi = 300)
+#        width = 13, height = 6, dpi = 300)
 
 ######################
 # pull out numbers that I need for 54D-20D trial and put into a data frame for graphing
-curvichryseo_fill <- c("Live Bd control", "Curvibacter sp. CFS treatment", "Chryseobacterium sp. CFS treatment", "Curvibacter sp. and Chryseobacterium sp.\ncombined CFS treatment")
-curvichryseo_labels <- c("Live Bd control", "Curvibacter sp. CFS treatment\nplus\nChryseobacterium sp. CFS treatment", "Curvibacter sp. CFS treatment\nplus\nChryseobacterium sp. CFS treatment", "Curvibacter sp.\nand Chryseobacterium sp.\ncombined CFS treatment")
-curvichryseo_levels <- c("Live Bd control", "Curvibacter sp. CFS treatment\nplus\nChryseobacterium sp. CFS treatment", "Curvibacter sp.\nand Chryseobacterium sp.\ncombined CFS treatment")
+curvichryseo_fill <- c("Live Bd control", "Curvibacter sp. CFS", "Chryseobacterium sp. CFS", "Curvibacter sp. and\nChryseobacterium sp.\ncombined CFS")
+curvichryseo_labels <- c("Live Bd control", "Curvibacter sp. CFS\nplus\nChryseobacterium sp. CFS", "Curvibacter sp. CFS\nplus\nChryseobacterium sp. CFS", "Curvibacter sp. and\nChryseobacterium sp.\ncombined CFS")
+curvichryseo_levels <- c("Live Bd control", "Curvibacter sp. CFS\nplus\nChryseobacterium sp. CFS", "Curvibacter sp. and\nChryseobacterium sp.\ncombined CFS")
 # already have mean and sd for Live Bd from previous graph
 # already have mean for curvi only from previous graph
 # find mean for chryseo only
@@ -829,25 +830,26 @@ curvichryseo_graphas <- ggplot(cfs_as_graphdf2, aes(fill = factor(curvichryseo_f
     scale_fill_viridis(discrete = T) +
     geom_errorbar(mapping = aes(ymin = (curvichryseo_meancombos - curvichryseo_sd), 
                                 ymax = (curvichryseo_meancombos + curvichryseo_sd))) +
-    theme(#axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+    theme(axis.text.x = element_text(size = 16, face = "bold"),
           axis.title.x = element_blank(),
-          axis.title.y = element_text(size = 10),
-          axis.text.y = element_text(size = 10),
+          axis.title.y = element_text(size = 16, face = "bold"),
+          axis.text.y = element_text(size = 16, face = "bold"),
+          legend.text = element_text(size = 16, face = "bold"),
           legend.title = element_blank()) +
  #   coord_cartesian(ylim = c(-0.1, 4)) +
-    ylab("Difference in Bd growth from live Bd \ncontrol at time 100 hrs (mean live Bd OD minus mean CFS treatment OD)") 
+    ylab("Difference in Bd growth from live Bd") 
 curvichryseo_graphas
 # save graph
 # ggsave(filename = "curvichryseo_graphas.png",
 #        path = "Prelim_Figs/prelimPlots_cfs_as",
 #        plot = curvichryseo_graphas,
-#        width = 10, height = 6, dpi = 300)
+#        width = 13, height = 6, dpi = 300)
 
 ######################
 # pull out numbers that I need for 20D-JlivBTP trial and put into a data frame for graphing
-chryseojliv_fill <- c("Live Bd control", "Chryseobacterium sp. CFS treatment", "J. lividum CFS treatment", "Chryseobacterium sp. and J. lividum\ncombined CFS treatment")
-chryseojliv_labels <- c("Live Bd control", "Chryseobacterium sp. CFS treatment\nplus\nJ. lividum CFS treatment", "Chryseobacterium sp. CFS treatment\nplus\nJ. lividum CFS treatment", "Chryseobacterium sp.\nand J. lividum\ncombined CFS treatment")
-chryseojliv_levels <- c("Live Bd control", "Chryseobacterium sp. CFS treatment\nplus\nJ. lividum CFS treatment", "Chryseobacterium sp.\nand J. lividum\ncombined CFS treatment")
+chryseojliv_fill <- c("Live Bd control", "Chryseobacterium sp. CFS", "J. lividum CFS", "Chryseobacterium sp.\nand J. lividum\ncombined CFS")
+chryseojliv_labels <- c("Live Bd control", "Chryseobacterium sp.\nCFS plus\nJ. lividum CFS", "Chryseobacterium sp.\nCFS plus\nJ. lividum CFS", "Chryseobacterium sp.\nand J. lividum\ncombined CFS")
+chryseojliv_levels <- c("Live Bd control", "Chryseobacterium sp.\nCFS plus\nJ. lividum CFS", "Chryseobacterium sp.\nand J. lividum\ncombined CFS")
 # use mean and sd for Live Bd from previous graphs
 # use mean for chryseo only from previous graphs
 # use mean for Jliv only from previous graphs
@@ -872,42 +874,43 @@ chryseojliv_graphas <- ggplot(cfs_as_graphdf3, aes(fill = factor(chryseojliv_fil
     scale_fill_viridis(discrete = T) +
     geom_errorbar(mapping = aes(ymin = (chryseojliv_meancombos - chryseoJliv_sd), 
                                 ymax = (chryseojliv_meancombos + chryseoJliv_sd))) +
-    theme(#axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+    theme(axis.text.x = element_text(size = 16, face = "bold"),
           axis.title.x = element_blank(),
-          axis.title.y = element_text(size = 10),
-          axis.text.y = element_text(size = 10),
+          axis.title.y = element_text(size = 16, face = "bold"),
+          axis.text.y = element_text(size = 16, face = "bold"),
+          legend.text = element_text(size = 16, face = "bold"),
           legend.title = element_blank()) +
  #   coord_cartesian(ylim = c(-0.1, 4)) +
-    ylab("Difference in Bd growth from live Bd \ncontrol at time 100 hrs (mean live Bd OD minus mean CFS treatment OD)") 
+    ylab("Difference in Bd growth from live Bd") 
 chryseojliv_graphas
 # save graph
 # ggsave(filename = "chryseojliv_graphas.png",
 #        path = "Prelim_Figs/prelimPlots_cfs_as",
 #        plot = chryseojliv_graphas,
-#        width = 9, height = 6, dpi = 300)
+#        width = 13, height = 6, dpi = 300)
 
 #########################
 # Model graph as example
 # make some fake values
-model_fill <- c("Live Bd control", "Bacteria 1 CFS treatment", 
-                "Bacteria 2 CFS treatment", 
-                "Bacteria 1 and Bacteria 2\ncombined CFS treatment",
-                "Bacteria 1 and Bacteria 2\ncombined CFS treatment",
-                "Bacteria 1 and Bacteria 2\ncombined CFS treatment")
-model_fill_levels <- c("Live Bd control", "Bacteria 1 CFS treatment", 
-                "Bacteria 2 CFS treatment", 
-                "Bacteria 1 and Bacteria 2\ncombined CFS treatment")
-model_labels <- c("Live Bd control", 
-                  "Bacteria 1 CFS treatment\nplus\nBacteria 2 treatment", 
-                  "Bacteria 1 CFS treatment\nplus\nBacteria 2 treatment", 
-                  "Bacteria 1\nand Bacteria 2\ncombined CFS treatment\n(Additive inhibition example)", 
-                  "Bacteria 1\nand Bacteria 2\ncombined CFS treatment\n(Synergistic inhibition example)", 
-                  "Bacteria 1\nand Bacteria 2\ncombined CFS treatment\n(Antagonistic inhibition example)")
-model_levels <- c("Live Bd control", 
-                  "Bacteria 1 CFS treatment\nplus\nBacteria 2 treatment", 
-                  "Bacteria 1\nand Bacteria 2\ncombined CFS treatment\n(Additive inhibition example)", 
-                  "Bacteria 1\nand Bacteria 2\ncombined CFS treatment\n(Synergistic inhibition example)", 
-                  "Bacteria 1\nand Bacteria 2\ncombined CFS treatment\n(Antagonistic inhibition example)")
+model_fill <- c("Live Bd control", "Bacteria 1 CFS", 
+                "Bacteria 2 CFS", 
+                "Bacteria 1 and Bacteria 2\ncombined CFS",
+                "Bacteria 1 and Bacteria 2\ncombined CFS",
+                "Bacteria 1 and Bacteria 2\ncombined CFS")
+model_fill_levels <- c("Live Bd control", "Bacteria 1 CFS", 
+                "Bacteria 2 CFS", 
+                "Bacteria 1 and Bacteria 2\ncombined CFS")
+model_labels <- c("Live Bd\ncontrol", 
+                  "Bacteria 1 CFS\nplus\nBacteria 2", 
+                  "Bacteria 1 CFS\nplus\nBacteria 2", 
+                  "Additive\ninhibition\nexample", 
+                  "Synergistic\ninhibition\nexample", 
+                  "Antagonistic\ninhibition\nexample")
+model_levels <- c("Live Bd\ncontrol", 
+                  "Bacteria 1 CFS\nplus\nBacteria 2", 
+                  "Additive\ninhibition\nexample", 
+                  "Synergistic\ninhibition\nexample", 
+                  "Antagonistic\ninhibition\nexample")
 # use real mean and sd for Live Bd from previous graph
 # fake means for bacteria only from previous graph
 bact1_mean <- 0.05
@@ -936,13 +939,14 @@ model_graphas <- ggplot(model_graphdf4, aes(fill = factor(model_fill,
     scale_fill_viridis(discrete = T) +
     geom_errorbar(mapping = aes(ymin = (model_meancombos - model_sds), 
                                 ymax = (model_meancombos + model_sds))) +
-    theme(#axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+    theme(axis.text.x = element_text(size = 16, face = "bold"),
           axis.title.x = element_blank(),
-          axis.title.y = element_text(size = 10),
-          axis.text.y = element_text(size = 10),
+          axis.title.y = element_text(size = 16, face = "bold"),
+          axis.text.y = element_text(size = 16, face = "bold"),
+          legend.text = element_text(size = 16, face = "bold"),
           legend.title = element_blank()) +
     coord_cartesian(ylim = c(-0.05, 0.2)) +
-    ylab("Difference in Bd growth from live Bd \ncontrol at time 100 hrs (mean live Bd OD minus mean CFS treatment OD)") 
+    ylab("Difference in Bd growth from live Bd") 
 model_graphas
 # save graph
 # ggsave(filename = "model_graphas.png",
