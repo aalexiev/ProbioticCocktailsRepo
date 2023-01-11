@@ -3,6 +3,8 @@ title: "01_prelimViz"
 author: "Alexandra Alexiev"
 date: "4/29/2021"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 These are the preliminary visualizations and statistics for the probiotic cocktails experiment. We chose five microbes for this set of experiments, based on previous descriptive work where we grew over 100 toad skin bacteria on Bd lawns and measured the zone of inhibition. Four are highly inhibitive and create many connections in a co-occurence network, and one is non-inhibitive towards Bd but has been found in high relative abundance consistently in tadpole 16S sequencing data in past experiments.
@@ -595,19 +597,21 @@ CFS_fac_all_dotplot <- ggplot(data = cfsfacall_graphMeans, mapping = aes(x = bac
              fill = "#666666", alpha = 0.3) +
     annotate("label", x = 3.5, y = 0.18, 
              label = "Single Microbes\n(n = 6)",
-             size = 5) +
+             size = 6) +
     annotate("label", x = 14, y = 0.18, 
              label = "Co-cultures of two microbes\n(n = 15)",
-             size = 5) +
+             size = 6) +
     annotate("label", x = 21.9, y = 0.18, 
              label = "Control\n(n = 1)",
-             size = 5) +
+             size = 6) +
     geom_text(aes(y = as.numeric(Mean_OD) + as.numeric(std), label = Letters),
                   position = position_dodge(width = 0.9), color = "black",
-                  vjust = -0.5, size = 6, show.legend = FALSE) +
-    theme(axis.text.x = element_text(angle = 70, hjust = 1),
+                  vjust = -0.5, size = 7, show.legend = FALSE) +
+    theme(axis.text.x = element_text(angle = 70, hjust = 1, size = 17),
           axis.title.x = element_blank(),
-          text = element_text(size = 17)) +
+          text = element_text(size = 17),
+          axis.text.y = element_text(size = 17),
+          axis.title.y = element_text(size = 18)) +
     coord_cartesian(ylim = c(-0.03, 0.2)) +
     ylab("Average Bd growth at 100 hrs (OD)")
 CFS_fac_all_dotplot
@@ -616,7 +620,7 @@ CFS_fac_all_dotplot
 ggsave(filename = "CFS_fac_all_dotplot.png",
            path = "Prelim_Figs",
            plot = CFS_fac_all_dotplot,
-           width = 13, height = 8, dpi = 300)
+           width = 13, height = 8, dpi = 400)
 
 ```
 
